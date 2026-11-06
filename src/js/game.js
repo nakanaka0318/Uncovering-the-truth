@@ -33,15 +33,15 @@ const Game = (() => {
   const emit = (ev, data) => listeners.forEach((f) => f(ev, data));
 
   /* ----- 解禁 ----- */
-  const roleUnlocked = (r) => (r.unlock || 0) <= meta.trialsCleared;
+  const roleUnlocked = (r) => (r.unlock || 0) <= meta.trialsCleared || (r.complex && !!meta.flags.abyss) || (r.extraOnly && !!meta.flags.abyss);
   function relicUnlocked(rl) {
     const u = rl.unlock;
     if (u === 'base') return true;
     if (u[0] === 't') return meta.trialsCleared >= +u.slice(1);
     return !!meta.flags[u];
   }
-  function pools() {
-    const un = ROLES.filter(roleUnlocked);
+  function pools(extra) {
+    const un = extra ? ROLES.filter((r) => !r.finalOnly && !r.extraOnly) : ROLES.filter(roleUnlocked);
     return {
       good: un.filter((r) => r.align === 'good').map((r) => r.id),
       med: un.filter((r) => r.align === 'med').map((r) => r.id),
@@ -85,23 +85,25 @@ const Game = (() => {
       if (ch.boss === 'any') {
         const cands = ['wolfking', 'bishop', 'masked'].filter((b) => roleUnlocked(ROLE[b]));
         boss = r.pick(cands);
-      } else if (ch.boss === 'masked' && !roleUnlocked(ROLE.masked)) boss = 'wolfking';
+      } else if (ch.boss === 'masked' && !roleUnlocked(ROLE.masked) && !ch.extra) boss = 'wolfking';
       else boss = ch.boss;
     }
     let k = base.k, m = base.m;
     const n = base.R * base.C;
     if (run.rank >= 2 && run.chapter >= 1) m += 1;
     if (run.rank >= 4 && run.chapter >= 2) k = Math.min(k + 1, Math.floor(n / 3) + 1);
-    const afflictCount = { wolfking: 1, bishop: 2, lord: 2 }[boss] || 0;
+    const afflictCount = { wolfking: 1, bishop: 2, lord: 2, hollow: 2, thousand: 1 }[boss] || 0;
     let maxAmb = 1;
     if (run.chapter >= 1) maxAmb = r.chance(0.3) ? 2 : 1;
     if (ch.final) maxAmb = r.chance(0.5) ? 2 : 1;
-    return { R: base.R, C: base.C, k, m, boss, afflictCount, maxAmb, chapter: run.chapter };
+    if (ch.extra) maxAmb = r.chance(0.35) ? 2 : 1;
+    return { R: base.R, C: base.C, k, m, boss, afflictCount, maxAmb, chapter: run.chapter, lurk: base.lurk || 0, complex: !!base.complex, extra: !!ch.extra };
   }
 
   function startTrial() {
     const spec = trialSpec();
-    const res = generateTrial(spec, pools(), run.seed + ':trial:' + run.step);
+    if (spec.extra && !meta.flags.abyss) { meta.flags.abyss = true; saveMeta(); }
+    const res = generateTrial(spec, pools(spec.extra), run.seed + ':trial:' + run.step);
     const r = rng('names');
     const names = r.sample(NAMES, spec.R * spec.C);
     const cards = res.w.cards.map((c, x) => ({
@@ -113,7 +115,8 @@ const Game = (() => {
       tenbin: false,
     }));
     const t = {
-      R: spec.R, C: spec.C, n: spec.R * spec.C, k: spec.k, u: res.w.u, m: spec.m,
+      R: spec.R, C: spec.C, n: spec.R * spec.C, k: spec.k, u: res.w.u, m: spec.m, lurk: res.w.lurk || 0,
+      misPlus: CHAPTERS[run.chapter].misPlus || 0,
       boss: spec.boss, chapter: run.chapter, idx: run.trialIdx, amb: res.amb,
       cards, order: [], evilDown: 0, mis: 0, done: false, failed: false,
       pardon: false, hotenUsed: false, bossRow: null, events: [],
@@ -176,6 +179,7 @@ const Game = (() => {
       let p = c.align === 'med' ? (ROLE[c.role].execCost || 1) : 2;
       if (agitatorAlive(t)) p += 1;
       if (run.rank >= 5) p += 1;
+      p += t.misPlus || 0;
       if (has('hoten') && !t.hotenUsed) { p = Math.max(0, p - 1); t.hotenUsed = true; }
       if (t.pardon) { p = 0; t.pardon = false; out.saved = 'pardon'; }
       else if (has('kuroneko') && rng('neko' + t.mis + ':' + i).chance(0.5)) { p = 0; out.saved = 'kuroneko'; }
@@ -212,14 +216,18 @@ const Game = (() => {
       if (run.chapter === 1) meta.flags.ch2 = true;
       if (run.chapter === 2) meta.flags.ch3 = true;
       if (ch.final) meta.flags.win = true;
+      if (ch.extra && !ch.finalExtra) meta.flags.abyss1 = true;
+      if (ch.finalExtra) meta.flags.abyss2 = true;
       meta.bestChapter = Math.max(meta.bestChapter, run.chapter);
     }
     out.unlocks = checkUnlocks(before);
     meta.newUnlocks = (meta.newUnlocks || []).concat(out.unlocks);
-    if (ch.final) {
+    if (ch.final && lastOfChapter && !run.extended) {
       meta.wins++;
       meta.maxRank = Math.max(meta.maxRank, Math.min(RANKS.length - 1, run.rank + 1));
       run.phase = 'victory';
+    } else if (ch.finalExtra && lastOfChapter) {
+      run.phase = 'victory2';
     } else {
       run.phase = 'reward';
       run.reward = makeReward(!!ch.trials[run.trialIdx].boss);
@@ -251,15 +259,16 @@ const Game = (() => {
       if (it.target === 'flipped' && !c.flipped) return { error: '尋問済みの者にしか使えない。' };
       res.card = c;
       if (id === 'holywater') {
-        const fakesGood = ['spy', 'masked', 'lord'].includes(c.role);
+        const fakesGood = ['spy', 'masked', 'lord', 'hollow', 'thousand'].includes(c.role);
         c.holy = c.align === 'evil' && !fakesGood ? 'evil' : 'good';
         res.result = c.holy;
       } else if (id === 'scales') {
         c.truthShown = true;
         res.result = statementTruth(t, c.i);
       } else if (id === 'candle') {
-        c.identity = c.role === 'masked' ? c.claim : c.role;
-        if (c.afflict && c.role !== 'masked') c.afflictShown = true;
+        const fooled = c.role === 'masked' || c.role === 'hollow';
+        c.identity = fooled ? c.claim : c.role;
+        if (c.afflict) c.afflictShown = true;
         res.result = c.identity;
       }
     } else {
@@ -380,6 +389,35 @@ const Game = (() => {
 
   function abandon() { run = null; saveRun(); }
 
+  /* ----- 外典（勝利後の続き） ----- */
+  const firstExtra = () => CHAPTERS.findIndex((c) => c.extra);
+  function continueExtra() {
+    run.extended = true;
+    run.chapter = firstExtra();
+    run.trialIdx = 0;
+    run.step++;
+    run.cred = Math.min(run.maxCred, run.cred + 2);
+    meta.flags.abyss = true;
+    saveMeta();
+    startTrial();
+    saveRun();
+  }
+  function newExtraRun(rank) {
+    newRun(rank);
+    const r = new RNG(run.seed + ':extra-start');
+    run.relics = r.sample(RELICS.filter((x) => relicUnlocked(x) && x.id !== 'seiyaku').map((x) => x.id), 2);
+    run.items = ['holywater', 'scales'];
+    run.silver = 40;
+    run.extended = true;
+    run.direct = true;
+    run.chapter = firstExtra();
+    run.step++;
+    meta.flags.abyss = true;
+    saveMeta();
+    startTrial();
+    saveRun();
+  }
+
   /* ----- 手ほどき（固定盤面） ----- */
   function tutorialTrial() {
     const def = [
@@ -430,7 +468,7 @@ const Game = (() => {
   return {
     get meta() { return meta; }, get run() { return run; },
     loadMeta, saveMeta, loadRun, saveRun, newRun, flip, setMark, execute, useItem, slotCount,
-    takeReward, skipReward, buy, rest, nextChapter, abandon, has, relicUnlocked, roleUnlocked,
+    takeReward, skipReward, buy, rest, nextChapter, abandon, has, relicUnlocked, roleUnlocked, continueExtra, newExtraRun,
     startTutorial, tutorialExecute, endTutorial, emit, listeners, agitatorAlive,
     clearRunOnly() { run = null; store.del(RUN_KEY); },
     resetAll() { store.del(RUN_KEY); store.del(META_KEY); loadMeta(); run = null; },

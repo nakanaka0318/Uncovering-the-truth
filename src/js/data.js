@@ -78,6 +78,25 @@ const ROLES = [
   { id: 'numer', name: '数秘術師', glyph: '数', align: 'good', unlock: 40,
     desc: '虚偽者全員の番号を足した数が、奇数か偶数かを語る。',
     lore: '数は魂の影。和は運命の形。' },
+  // ----- 複雑な無辜（外典に到達するか、累計審判で解禁） -----
+  { id: 'registrar', name: '書記官', glyph: '記', align: 'good', unlock: 48, complex: true,
+    desc: '虚偽者のうち、最も若い番号（または最も大きい番号）が誰かを語る。',
+    lore: '名簿の端から順に、罪人の名を探してきた。' },
+  { id: 'astro', name: '星読み', glyph: '星', align: 'good', unlock: 52, complex: true,
+    desc: '虚偽者が一人でもいる横列（または縦列）が、全部で何本あるかを語る。',
+    lore: '星座の数を数えるように、闇の筋を数える。' },
+  { id: 'witness', name: '証人', glyph: '証', align: 'good', unlock: 56, complex: true,
+    desc: '「もしAが虚偽者なら、Bは虚偽者だ」のような、条件付きの証言をする。条件が成り立たなければ、証言は真実として扱われる。',
+    lore: '見たのは一瞬。だから「もし」をつけて語る。' },
+  { id: 'heretic', name: '異端審問官', glyph: '異', align: 'good', unlock: 60, complex: true,
+    desc: '三人を名指しし、その中の虚偽者が奇数人か偶数人（0人を含む）かを語る。',
+    lore: '数の綾で魂を暴く、古い流派の生き残り。' },
+  { id: 'scout', name: '斥候', glyph: '斥', align: 'good', unlock: 64, complex: true,
+    desc: '最も近くにいる虚偽者どうしが、上下左右に何歩離れているかを語る。',
+    lore: '敵陣の間合いを、足で覚えている。' },
+  { id: 'split', name: '二重人格', glyph: '双', align: 'good', unlock: 68, complex: true,
+    desc: '二つの証言をする。無辜なら、ちょうど一方だけが真実。（虚偽者がこの身分を騙ると、二つとも偽りか、二つとも真実になる）',
+    lore: '昼の私と夜の私。どちらかは嘘をついている。' },
 
   // ---------- 惑い者 ----------
   { id: 'drunk', name: '酔いどれ', glyph: '酔', align: 'med', unlock: 0, policy: 'R',
@@ -109,6 +128,9 @@ const ROLES = [
   { id: 'agitator', name: '扇動者', glyph: '扇', align: 'minion', unlock: 36, open: true,
     desc: '正体を隠さない。生きている間、誤った処刑の信用減少が＋1される。無辜を虚偽者だと告発する。',
     lore: '群衆の怒りは、薪より良く燃える。' },
+  { id: 'lurker', name: '潜伏者', glyph: '潜', align: 'minion', unlock: 50, complex: true,
+    desc: '無辜の身分を騙るが、証言は必ず真実。矛盾からは見つからない。人数は審判の初めに示される。聖水では「悪」と出る。',
+    lore: '嘘をつかぬ裏切り者ほど、恐ろしいものはない。' },
 
   // ---------- 首魁 ----------
   { id: 'wolfking', name: '狼の王', glyph: '狼', align: 'boss', unlock: 0,
@@ -123,6 +145,12 @@ const ROLES = [
   { id: 'lord', name: '偽りの廷主', glyph: '廷', align: 'boss', unlock: 0, finalOnly: true,
     desc: '無辜の身分を騙り、嘘をつく。無辜一人に毒を、もう一人に魅了をかける。聖水では「善」と出る。',
     lore: 'この廷のすべての嘘は、彼のために編まれた。' },
+  { id: 'hollow', name: '虚ろの王', glyph: '虚', align: 'boss', unlock: 0, extraOnly: true,
+    desc: '無辜の身分を騙り、嘘をつく。無辜一人に毒を、一人に魅了をかける。聖水では「善」と出て、蝋燭の灯は偽りの身分を映す。',
+    lore: '冠の下には、顔がない。' },
+  { id: 'thousand', name: '千の貌', glyph: '貌', align: 'boss', unlock: 0, extraOnly: true,
+    desc: '無辜の身分を騙り、嘘をつく。従者の一人を潜伏者に変え、無辜一人に毒を盛る。聖水では「善」と出る。',
+    lore: '千の顔のどれもが、本物の誰かから剥がされた。' },
 ];
 const ROLE = Object.fromEntries(ROLES.map((r) => [r.id, r]));
 const ALIGN_LABEL = { good: '無辜', med: '惑い者', minion: '従者', boss: '首魁' };
@@ -204,7 +232,15 @@ const CHAPTERS = [
   { name: '偽りの廷', no: '終章', boss: 'lord', final: true,
     intro: 'すべての嘘が流れ着く場所。審問官よ、最後の法廷に立て。',
     trials: [{ R: 3, C: 4, k: 4, m: 1, boss: true }] },
+  // ----- 外典（勝利後の続き） -----
+  { name: '深淵の書庫', no: '外典・壱', level: '超むず', boss: 'hollow', extra: true,
+    intro: '廷主の玉座の下に、階段が続いていた。焼かれたはずの記録が眠る書庫で、新たな囁きが始まる。',
+    trials: [{ R: 4, C: 4, k: 5, m: 1, complex: true }, { R: 4, C: 4, k: 5, m: 1, lurk: 1, complex: true }, { R: 4, C: 4, k: 5, m: 0, boss: true, complex: true }] },
+  { name: '奈落の大法廷', no: '外典・弐', level: '激ムズ', boss: 'thousand', extra: true, finalExtra: true, misPlus: 1,
+    intro: '書庫の底は、もう一つの法廷だった。ここでは、真実を語る者さえ敵かもしれない。誤った処刑の咎は、より重い。',
+    trials: [{ R: 4, C: 4, k: 6, m: 1, lurk: 1, complex: true }, { R: 4, C: 4, k: 6, m: 2, lurk: 1, complex: true }, { R: 4, C: 4, k: 6, m: 1, boss: true, complex: true }] },
 ];
+const MAIN_CHAPTERS = CHAPTERS.filter((c) => !c.extra).length;
 
 /* ===== 階位（難易度） ===== */
 const RANKS = [

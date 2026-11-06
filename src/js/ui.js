@@ -97,6 +97,7 @@ const UI = (() => {
     if (r.phase === 'reward') return showReward();
     if (r.phase === 'interlude') return showInterlude();
     if (r.phase === 'victory') return showVictory();
+    if (r.phase === 'victory2') return showVictory2();
     showTitle();
   }
 
@@ -121,6 +122,7 @@ const UI = (() => {
         <nav class="menu">
           ${canContinue ? `<button class="btn primary" data-act="continue">続きから<small style="font-size:11px;letter-spacing:.05em;color:var(--ash)">　${esc(CHAPTERS[r.chapter].no)}・信用${r.cred}</small></button>` : ''}
           <button class="btn ${canContinue ? '' : 'primary'}" data-act="new">新たな審問</button>
+          ${m.flags.win ? '<button class="btn" data-act="new-extra">外典に挑む<small style="font-size:11px;letter-spacing:.05em;color:#ef9aa6">　超むず・激ムズ</small></button>' : ''}
           <button class="btn" data-act="tutorial">手ほどき${m.tutorialDone ? '' : '<span class="badge-new">初めての方へ</span>'}</button>
           <div class="menu-row">
             <button class="btn" data-act="codex">身分図鑑${newCount ? '<span class="badge-new">新</span>' : ''}</button>
@@ -191,7 +193,7 @@ const UI = (() => {
       </header>
       <div class="countbar" id="countbar"></div>
       <main class="stage">
-        <section class="board-wrap" id="bwrap"><div class="board" id="board"></div></section>
+        <section class="board-wrap ${t.R >= 4 ? 'rows4' : ''}" id="bwrap"><div class="board" id="board"></div></section>
         <aside class="side">
           <div class="panel detail" id="detail"></div>
           <div class="panel log" id="log"></div>
@@ -222,11 +224,13 @@ const UI = (() => {
     if (!t || !wrap) return;
     const W = wrap.clientWidth, H = wrap.clientHeight;
     const gap = clamp(Math.round(Math.min(W, H) * 0.025), 6, 14);
-    let cw = Math.min((W - gap * (t.C - 1) - 12) / t.C, (H - gap * (t.R - 1) - 18) / (t.R * 1.38));
+    const ratio = t.R >= 4 ? 1.18 : 1.38;
+    let cw = Math.min((W - gap * (t.C - 1) - 12) / t.C, (H - gap * (t.R - 1) - 18) / (t.R * ratio));
     cw = clamp(Math.floor(cw), 44, 150);
     const board = document.getElementById('board');
     board.style.setProperty('--cw', cw + 'px');
     board.style.setProperty('--gap', gap + 'px');
+    board.style.setProperty('--ratio', ratio);
   }
 
   function trialIntro() {
@@ -239,7 +243,10 @@ const UI = (() => {
     ov.innerHTML = `<div class="ov-inner">
       ${first ? `<div class="chap-title"><span>${esc(ch.no)}</span><b>${esc(ch.name)}</b></div><p class="story">${esc(ch.intro)}</p>` : ''}
       <div class="stamp-big" style="font-size:clamp(30px,8vw,46px)">${label}</div>
-      <p class="ov-sub">容疑者 ${t.n}人　虚偽者 ${t.k}人　惑い者 ${t.u}人</p>
+      ${ch.level ? `<p class="ov-sub" style="color:#ef9aa6;letter-spacing:.3em">難度　${esc(ch.level)}</p>` : ''}
+      <p class="ov-sub"><span style="white-space:nowrap">容疑者 ${t.n}人</span>　<span style="white-space:nowrap">虚偽者 ${t.k}人${t.lurk ? `（うち潜伏者 ${t.lurk}人）` : ''}</span>　<span style="white-space:nowrap">惑い者 ${t.u}人</span></p>
+      ${t.lurk ? '<p class="ov-sub" style="color:var(--gold)">潜伏者は虚偽者だが、真実しか語らない。矛盾だけでは見つからない。</p>' : ''}
+      ${t.misPlus ? `<p class="ov-sub" style="color:#ef9aa6">この廷では、誤った処刑の信用減少が＋${t.misPlus}される。</p>` : ''}
       ${t.boss ? `<p class="ov-sub" style="color:#ef9aa6">この廷には首魁『${esc(ROLE[t.boss].name)}』が潜む。<br><small style="color:var(--ash)">${esc(ROLE[t.boss].desc)}</small></p>` : ''}
       <button class="btn primary" data-act="close-ov">審問を始める</button>
     </div>`;
@@ -314,6 +321,7 @@ const UI = (() => {
     const relics = r.relics.map((id) => `<i class="glyph relic" role="button" tabindex="0" data-act="relic" data-id="${id}" title="${esc(RELIC[id].name)}">${RELIC[id].glyph}</i>`).join('');
     el.innerHTML = `
       <span class="liars">虚偽者 <b>${t.evilDown}/${t.k}</b> 処刑</span>
+      ${t.lurk ? `<span class="liars" role="button" tabindex="0" data-act="lurkinfo" style="cursor:pointer">うち潜伏者 <b>${t.lurk}</b></span>` : ''}
       <span class="unr">惑い者 <b>${t.u}</b></span>
       <span>尋問 <b>${flipped}/${t.n}</b></span>
       ${t.boss ? `<span role="button" tabindex="0" data-act="bossinfo" style="cursor:pointer">首魁 <b style="color:#ef9aa6">${esc(ROLE[t.boss].name)}</b></span>` : ''}
@@ -476,7 +484,7 @@ const UI = (() => {
     if (!c || c.executed) return;
     if (!c.flipped) { toast('尋問していない者は裁けない。', 'bad'); return; }
     const ro2 = ROLE[c.claim];
-    confirmBox('処刑の宣告', `${circ(c.i)} ${esc(c.name)}（${esc(ro2.name)}）を処刑しますか。<br><small style="color:var(--ash)">無辜なら信用−2、惑い者なら信用−1${c.claim === 'jester' ? '（道化は−3）' : ''}。</small>`, '処刑する', () => { setTimeout(() => doExecute(c.i), 50); }, true);
+    confirmBox('処刑の宣告', `${circ(c.i)} ${esc(c.name)}（${esc(ro2.name)}）を処刑しますか。<br><small style="color:var(--ash)">無辜なら信用−${2 + (t.misPlus || 0)}、惑い者なら信用−${1 + (t.misPlus || 0)}${c.claim === 'jester' ? '（道化はさらに重い）' : ''}。</small>`, '処刑する', () => { setTimeout(() => doExecute(c.i), 50); }, true);
   }
 
   function doExecute(i) {
@@ -661,8 +669,12 @@ const UI = (() => {
   function progressHTML() {
     const r = run();
     let h = '<div class="progress" aria-label="進行">';
+    let first = true;
     CHAPTERS.forEach((ch, ci) => {
-      if (ci) h += '<span class="sep"></span>';
+      if (ch.extra && !r.extended) return;
+      if (r.direct && !ch.extra) return;
+      if (!first) h += '<span class="sep"></span>';
+      first = false;
       ch.trials.forEach((_, ti) => {
         const done = ci < r.chapter || (ci === r.chapter && ti < r.trialIdx) || (ci === r.chapter && ti === r.trialIdx && r.phase !== 'trial');
         const cur = ci === r.chapter && ti === r.trialIdx && r.phase === 'trial';
@@ -698,6 +710,8 @@ const UI = (() => {
       '黒衣の司教の杯は割られた。積み荷の帳簿には、都の鐘楼の印章が押されていた。',
       '都の首魁は裁かれた。鐘の音が止んだ夜、大聖堂の扉だけが開いていた。',
       '大聖堂の祈りは途絶えた。最後の扉の向こうで、すべての嘘の源が待っている。',
+      '',
+      '虚ろの王の冠が床に落ちた。書庫の最奥に、さらに深く降りる螺旋階段が口を開けている。',
     ];
     setScreen(`<div class="page-inner">
       ${progressHTML()}
@@ -731,8 +745,51 @@ const UI = (() => {
         <div><span>残った信用</span><span>${r.cred} / ${r.maxCred}</span></div>
       </div>
       ${unlockedRank ? `<div class="unlock-note" style="max-width:420px;margin:0 auto">新たな階位『${esc(RANKS[r.rank + 1].name)}』で審問できるようになった。</div>` : ''}
+      <div class="unlock-note" style="max-width:420px;margin:0 auto">玉座の下に、さらに続く階段が見つかった。<b>外典</b>（超むず・激ムズ）へ、この審問を続けられる。複雑な身分と、真実を語る裏切り者「潜伏者」が待つ。</div>
+      <div class="center-row"><button class="btn ghost" data-act="end-run">ここで終える</button><button class="btn primary" data-act="go-extra">続き：外典『${esc(CHAPTERS.find((c) => c.extra).name)}』へ</button></div>
+    </div>`, 'page');
+  }
+
+  function showVictory2() {
+    view = 'victory';
+    Audio2.setMood('calm');
+    Audio2.play('victory');
+    const r = run();
+    setScreen(`<div class="page-inner" style="margin:auto 0;text-align:center">
+      <div class="chap-title"><span>外典　完</span></div>
+      <div class="stamp-big" style="font-size:clamp(28px,8.4vw,54px);letter-spacing:.12em;text-indent:.12em">奈落は閉ざされた</div>
+      <p class="story">千の貌は、最後に一つの顔も残さず崩れ落ちた。<br>真実を語る裏切り者さえ見抜いた審問官を、もはや欺ける者はいない。<br>蝋燭が燃え尽きるまで、この夜のことは語り継がれるだろう。</p>
+      <div class="ledger" style="max-width:420px;margin:0 auto">
+        <div><span>階位</span><span>${esc(RANKS[r.rank].name)}</span></div>
+        <div><span>終えた審判</span><span>${r.stats.trials}</span></div>
+        <div><span>処刑した虚偽者</span><span>${r.stats.evil}</span></div>
+        <div><span>誤った処刑</span><span>${r.stats.mis}</span></div>
+        <div><span>残った信用</span><span>${r.cred} / ${r.maxCred}</span></div>
+      </div>
       <div class="center-row"><button class="btn primary" data-act="end-run">タイトルへ</button></div>
     </div>`, 'page');
+  }
+
+  function startExtraFlow() {
+    const m = Game.meta;
+    const r = run();
+    const go = (rank) => { Game.newExtraRun(rank); showTrial(false, true); };
+    const pick = () => {
+      if (m.maxRank === 0) return go(0);
+      const body = `<div class="rank-list">${RANKS.map((rk, i) => `<button class="rank-opt" data-rank="${i}" ${i > m.maxRank ? 'disabled' : ''}><span class="rn">${['0', 'I', 'II', 'III', 'IV', 'V'][i]}</span><b>${esc(rk.name)}</b><span>${esc(rk.desc)}</span></button>`).join('')}</div>`;
+      const md = modal({ title: '外典の階位', body });
+      md.el.addEventListener('click', (e) => { const b = e.target.closest('[data-rank]'); if (b && !b.disabled) { md.close(); go(+b.dataset.rank); } });
+    };
+    const intro = () => modal({
+      title: '外典に挑む',
+      body: `<p>勝利の後に続く、二つの章だけの審問です。聖遺物2つと道具2つを持って、外典の一章から始めます。</p>
+        <p><b style="color:#ef9aa6">外典・壱『深淵の書庫』超むず</b>：4×4の盤、虚偽者5人。複雑な身分が多く現れ、真実を語る裏切り者<b>潜伏者</b>が紛れる。</p>
+        <p><b style="color:#ef9aa6">外典・弐『奈落の大法廷』激ムズ</b>：虚偽者6人、潜伏者つき。誤った処刑の信用減少が＋1。</p>`,
+      buttons: [{ label: 'やめる', cls: 'ghost' }, { label: '挑む', cls: 'danger', onClick: () => { setTimeout(pick, 0); } }],
+    });
+    if (r && !r.tutorial && ['trial', 'reward', 'interlude'].includes(r.phase)) {
+      confirmBox('外典に挑む', '進行中の審問は破棄されます。よろしいですか。', '破棄して挑む', () => { setTimeout(intro, 0); }, true);
+    } else intro();
   }
 
   /* ========== 各種の帳面 ========== */
@@ -740,18 +797,20 @@ const UI = (() => {
     return `<div class="rules">
       <h4>審問官の務め</h4>
       <ul><li>盤上に潜む<b>虚偽者</b>を全員処刑すれば、その審判は終わる。虚偽者と惑い者の人数は常に示される。</li>
-      <li>全${CHAPTERS.length - 1}章（各3審判）と最終審判を越えれば勝利。</li></ul>
+      <li>全${MAIN_CHAPTERS - 1}章（各3審判）と最終審判を越えれば勝利。勝利の後には、続きの<b>外典</b>（超むず・激ムズ）がある。</li></ul>
       <h4>尋問</h4>
       <ul><li>伏せ札に触れると尋問し、その者が<b>名乗る身分</b>と<b>証言</b>が明らかになる。</li>
       <li>回数の制限はない。ただし<b>鐘撞き</b>や<b>墓守</b>のように、尋問の順番を数える者もいる。</li></ul>
       <h4>三つの立場</h4>
       <ul><li><b>無辜</b>：必ず真実を語る。</li>
       <li><b>虚偽者</b>（従者・首魁）：必ず嘘をつく。多くは無辜の身分を騙り、その身分の作法で嘘をつく。一部は正体を隠さない。</li>
-      <li><b>惑い者</b>：善側だが、証言は当てにならない。生まれつきの惑い者のほか、<b>毒</b>や<b>魅了</b>を受けた無辜も惑い者として数える。</li></ul>
+      <li><b>惑い者</b>：善側だが、証言は当てにならない。生まれつきの惑い者のほか、<b>毒</b>や<b>魅了</b>を受けた無辜も惑い者として数える。</li>
+      <li><b>潜伏者</b>：例外の虚偽者。真実しか語らないので、矛盾からは見つからない。いる時は人数が示される。他の者の証言から追い詰めよう。</li></ul>
       <h4>手がかりの掟</h4>
       <ul><li><b>善側（無辜・惑い者）の身分は重複しない。</b>同じ身分を名乗る者が二人いれば、少なくとも一方は虚偽者。</li>
       <li><b>上下左右</b>＝隣り合う4方向。<b>周囲八方</b>＝斜めを含む8方向。<b>歩</b>＝上下左右に進む歩数。</li>
       <li><b>陣営</b>＝虚偽者か、そうでないか。証言の数には、すでに処刑された者も含まれる。</li>
+      <li>「もしAが虚偽者なら、Bは虚偽者だ」という証言は、Aが虚偽者でなければ真実として扱われる。</li>
       <li>盤面によっては、論理だけでは二通りに絞るのが限界のこともある。道具や聖遺物で見極めよう。</li></ul>
       <h4>処刑と信用</h4>
       <ul><li>無辜を処刑すると<b>信用−2</b>、惑い者なら<b>−1</b>（道化は−3）。信用が尽きると<b>解任</b>。</li>
@@ -777,9 +836,9 @@ const UI = (() => {
       const list = ROLES.filter((r) => r.align === tb);
       b.innerHTML = list.map((r) => {
         const un = Game.roleUnlocked(r);
-        if (!un) return `<div class="entry locked"><i class="glyph">？</i><div class="entry-n">？？？</div><div class="entry-d">累計${r.unlock}審判を終えると現れる。</div></div>`;
+        if (!un) return `<div class="entry locked"><i class="glyph">？</i><div class="entry-n">？？？</div><div class="entry-d">${r.extraOnly ? '外典に到達すると明らかになる。' : r.complex ? `外典に到達するか、累計${r.unlock}審判を終えると現れる。` : `累計${r.unlock}審判を終えると現れる。`}</div></div>`;
         return `<div class="entry"><i class="glyph ${r.align}">${r.glyph}</i>
-          <div class="entry-n">${esc(r.name)}<small>${ALIGN_LABEL[r.align]}${r.open ? '・正体を隠さない' : ''}${r.finalOnly ? '・終章のみ' : ''}</small></div>
+          <div class="entry-n">${esc(r.name)}<small>${ALIGN_LABEL[r.align]}${r.open ? '・正体を隠さない' : ''}${r.finalOnly ? '・終章のみ' : ''}${r.extraOnly ? '・外典のみ' : ''}${r.complex ? '・複雑' : ''}</small></div>
           <div class="entry-d">${esc(r.desc)}<em>${esc(r.lore)}</em></div></div>`;
       }).join('');
       b.scrollTop = 0;
@@ -815,6 +874,7 @@ const UI = (() => {
         <div><span>誤った処刑</span><span>${m.misExec}</span></div>
         <div><span>最高到達</span><span>${m.bestChapter >= 0 ? esc(CHAPTERS[Math.min(m.bestChapter + 1, CHAPTERS.length - 1)].no) + 'まで' : '―'}</span></div>
         <div><span>到達階位</span><span>${esc(RANKS[m.maxRank].name)}</span></div>
+        <div><span>外典</span><span>${m.flags.abyss2 ? '奈落の大法廷まで踏破' : m.flags.abyss1 ? '深淵の書庫を踏破' : m.flags.abyss ? '到達' : '―'}</span></div>
         <div><span>解禁した身分</span><span>${unRoles} / ${ROLES.length}</span></div>
         <div><span>解禁した聖遺物</span><span>${unRelics} / ${RELICS.length}</span></div>
       </div>`,
@@ -955,6 +1015,9 @@ const UI = (() => {
       case 'continue': Audio2.play('select'); route(); break;
       case 'new': Audio2.play('select'); startNewFlow(); break;
       case 'tutorial': Audio2.play('select'); startTutorial(); break;
+      case 'new-extra': Audio2.play('select'); startExtraFlow(); break;
+      case 'go-extra': Audio2.play('select'); Game.continueExtra(); showTrial(false, true); break;
+      case 'lurkinfo': toast(`<b>潜伏者</b>：${esc(ROLE.lurker.desc)}`); break;
       case 'codex': case 'codexbtn': Audio2.play('select'); showCodex(); break;
       case 'relics': Audio2.play('select'); showRelics(); break;
       case 'records': Audio2.play('select'); showRecords(); break;
