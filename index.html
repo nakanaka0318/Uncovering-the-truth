@@ -1,0 +1,3202 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>偽りの廷</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="一人で遊ぶ人狼×推理×ローグライク。証言の矛盾から虚偽者を暴け。">
+<meta name="theme-color" content="#0c0a0d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Shippori+Mincho+B1:wght@400;700;800&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+/* 偽りの廷 — 蝋燭の灯る石造りの法廷。暗い石の地に金の縁取り、血の赤は判決にだけ使う。 */
+:root {
+  --ink: #0c0a0d;
+  --stone: #161116;
+  --stone-2: #1f181e;
+  --stone-3: #2a2028;
+  --line: #3b2f2d;
+  --gold: #c9a35b;
+  --gold-hi: #e8c987;
+  --gold-dim: #7d6741;
+  --parch: #ebdfc6;
+  --ash: #a0948d;
+  --ash-dim: #6c625e;
+  --blood: #b0283a;
+  --blood-deep: #4d0d17;
+  --ghost: #93b4c8;
+  --moss: #8fae78;
+  --seal-white: #e7e1d1;
+
+  --f-display: 'Shippori Mincho B1', 'Yu Mincho', 'YuMincho', 'Hiragino Mincho ProN', 'Noto Serif JP', serif;
+  --f-ui: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
+  --f-latin: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+
+  --gut-l: max(16px, env(safe-area-inset-left, 0px));
+  --gut-r: max(16px, env(safe-area-inset-right, 0px));
+  --cw: 92px;
+  --gap: 10px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--parch);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+#app { position: relative; height: 100%; overflow: hidden; isolation: isolate; }
+#app::before {
+  /* 石壁と蝋燭のにじみ */
+  content: ''; position: absolute; inset: 0; z-index: -2;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(201, 163, 91, 0.13), transparent 60%),
+    radial-gradient(60% 50% at 0% 100%, rgba(120, 20, 35, 0.16), transparent 70%),
+    radial-gradient(60% 50% at 100% 100%, rgba(120, 20, 35, 0.12), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 64px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 128px),
+    var(--ink);
+}
+#app::after {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 30%, rgba(232, 201, 135, 0.06), transparent 70%);
+  animation: flicker 5s infinite steps(1);
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; } 12% { opacity: 0.7; } 14% { opacity: 1; } 47% { opacity: 0.85; } 52% { opacity: 1; } 78% { opacity: 0.75; } 80% { opacity: 1; }
+}
+#dust { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.5; }
+
+.scr {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding-left: var(--gut-l); padding-right: var(--gut-r);
+  animation: scrIn 0.5s ease both;
+}
+@keyframes scrIn { from { opacity: 0; } to { opacity: 1; } }
+.scroll { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* ===== 共通部品 ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 8px 20px;
+  font-family: var(--f-display); font-weight: 700; font-size: 16px; letter-spacing: 0.12em;
+  color: var(--parch);
+  background: linear-gradient(180deg, var(--stone-3), var(--stone));
+  border: 1px solid var(--gold-dim);
+  box-shadow: inset 0 0 0 3px var(--stone), inset 0 0 0 4px rgba(201, 163, 91, 0.25), 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s, color 0.2s, transform 0.1s, filter 0.2s;
+}
+.btn:hover { border-color: var(--gold); color: var(--gold-hi); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.btn.primary { border-color: var(--gold); color: var(--gold-hi); }
+.btn.danger { border-color: var(--blood); background: linear-gradient(180deg, #3a1018, #1d070c); color: #f2cfd2; }
+.btn.danger:hover { color: #fff; border-color: #e0475b; }
+.btn.small { min-height: 36px; padding: 4px 14px; font-size: 14px; }
+.btn.ghost { background: transparent; box-shadow: none; border-color: var(--line); }
+
+.orn { display: flex; align-items: center; gap: 12px; color: var(--gold-dim); font-family: var(--f-latin); letter-spacing: 0.3em; font-size: 11px; text-transform: uppercase; }
+.orn::before, .orn::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-dim), transparent); }
+
+.glyph {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.7em; height: 1.7em; border-radius: 50%;
+  font-family: var(--f-display); font-weight: 800; font-style: normal; font-size: 0.9em; line-height: 1;
+  color: var(--ink); background: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+.glyph.med { background: var(--ghost); }
+.glyph.minion, .glyph.boss { background: var(--blood); color: #fbe7e9; }
+.glyph.item { background: var(--parch); }
+.glyph.relic { background: linear-gradient(135deg, var(--gold-hi), var(--gold-dim)); }
+
+.ref {
+  display: inline-grid; place-items: center;
+  min-width: 1.35em; height: 1.35em; padding: 0 1px; margin: 0 1px;
+  font-family: var(--f-display); font-weight: 800; font-size: 1em; line-height: 1;
+  color: var(--gold-hi); border-radius: 4px; cursor: pointer;
+  background: rgba(201, 163, 91, 0.12);
+}
+.ref:hover { background: rgba(201, 163, 91, 0.3); }
+
+.toast-wrap { position: absolute; z-index: 60; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 58px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; padding: 0 var(--gut-r) 0 var(--gut-l); }
+.toast {
+  max-width: 520px; padding: 8px 18px;
+  font-family: var(--f-display); font-size: 15px; text-align: center;
+  background: rgba(12, 10, 13, 0.92); border: 1px solid var(--gold-dim); color: var(--parch);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  animation: toastIn 0.3s ease both;
+}
+.toast.bad { border-color: var(--blood); color: #f4c9ce; }
+.toast.good { border-color: var(--moss); }
+.toast.out { animation: toastOut 0.4s ease both; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-8px); } }
+
+/* ===== モーダル ===== */
+.modal-bg {
+  position: absolute; inset: 0; z-index: 50;
+  display: grid; place-items: center;
+  padding: 16px var(--gut-r) 16px var(--gut-l);
+  background: rgba(5, 3, 5, 0.78); backdrop-filter: blur(3px);
+  animation: scrIn 0.25s ease both;
+}
+.modal {
+  position: relative; width: min(560px, 100%); max-height: 100%;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, var(--stone-2), var(--stone));
+  border: 1px solid var(--gold-dim);
+  box-shadow: inset 0 0 0 4px var(--stone), inset 0 0 0 5px rgba(201, 163, 91, 0.2), 0 30px 80px rgba(0, 0, 0, 0.8);
+  animation: modalIn 0.3s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+@keyframes modalIn { from { transform: scale(0.94) translateY(8px); opacity: 0; } }
+.modal-h { padding: 18px 22px 8px; font-family: var(--f-display); font-weight: 800; font-size: 20px; letter-spacing: 0.1em; color: var(--gold-hi); text-wrap: balance; }
+.modal-b { padding: 4px 22px 12px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.modal-b p { margin: 0 0 10px; }
+.modal-f { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 12px 22px 18px; border-top: 1px solid var(--line); }
+.modal-x { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; color: var(--ash); font-size: 20px; }
+.modal-x:hover { color: var(--parch); }
+
+.tabs { display: flex; gap: 4px; padding: 0 22px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { padding: 8px 12px; font-family: var(--f-display); font-weight: 700; color: var(--ash); border-bottom: 2px solid transparent; white-space: nowrap; }
+.tab.on { color: var(--gold-hi); border-color: var(--gold); }
+
+.entry { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 0; border-bottom: 1px dashed var(--line); }
+.entry:last-child { border-bottom: 0; }
+.entry .glyph { grid-row: span 2; font-size: 18px; }
+.entry-n { font-family: var(--f-display); font-weight: 800; font-size: 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.entry-n small { font-family: var(--f-ui); font-weight: 400; font-size: 11px; color: var(--ash); letter-spacing: 0.1em; }
+.entry-d { font-size: 13px; color: var(--parch); min-width: 0; }
+.entry-d em { display: block; font-style: normal; color: var(--ash); font-family: var(--f-display); margin-top: 2px; }
+.entry.locked { opacity: 0.55; }
+.entry.locked .glyph { background: var(--stone-3); color: var(--ash); }
+
+.rules h4 { margin: 16px 0 6px; font-family: var(--f-display); color: var(--gold); font-size: 15px; letter-spacing: 0.08em; }
+.rules ul { margin: 0; padding-left: 1.2em; }
+.rules li { margin: 3px 0; }
+.rules b { color: var(--gold-hi); font-weight: 700; }
+
+/* ===== タイトル ===== */
+.title { align-items: center; justify-content: center; text-align: center; overflow-y: auto; padding-block: 24px; }
+.title-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: auto 0; width: min(420px, 100%); }
+.crest { width: 92px; height: 92px; color: var(--gold); filter: drop-shadow(0 0 18px rgba(201, 163, 91, 0.35)); animation: crestIn 1.6s ease both; }
+@keyframes crestIn { from { opacity: 0; transform: translateY(-6px) scale(0.96); } }
+.title h1 {
+  margin: 0; font-family: var(--f-display); font-weight: 800;
+  font-size: clamp(44px, 13vw, 76px); letter-spacing: 0.16em; line-height: 1.1;
+  color: var(--parch); text-indent: 0.16em;
+  text-shadow: 0 0 30px rgba(201, 163, 91, 0.3), 0 2px 0 #000;
+  animation: titleIn 2s ease both 0.2s;
+}
+@keyframes titleIn { from { opacity: 0; letter-spacing: 0.4em; filter: blur(6px); } }
+.title .ruby { font-family: var(--f-display); color: var(--ash); letter-spacing: 0.6em; font-size: 12px; margin-top: -6px; text-indent: 0.6em; }
+.title .sub { font-family: var(--f-latin); color: var(--gold); letter-spacing: 0.32em; font-size: 12px; text-transform: uppercase; animation: scrIn 2s ease both 0.8s; }
+.menu { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 16px; animation: scrIn 1s ease both 1s; }
+.menu .btn { width: 100%; }
+.menu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.menu-row .btn { font-size: 14px; letter-spacing: 0.06em; padding: 8px 10px; }
+.title-foot { margin-top: 18px; color: var(--ash-dim); font-size: 12px; letter-spacing: 0.08em; }
+.badge-new { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 10px; letter-spacing: 0.1em; color: var(--ink); background: var(--gold); border-radius: 2px; font-family: var(--f-ui); }
+.candles-deco { display: flex; gap: 34px; align-items: flex-end; height: 50px; }
+
+.rank-list { display: flex; flex-direction: column; gap: 8px; }
+.rank-opt { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; text-align: left; padding: 10px 14px; border: 1px solid var(--line); background: var(--stone); }
+.rank-opt:hover:not([disabled]) { border-color: var(--gold); }
+.rank-opt[disabled] { opacity: 0.4; cursor: not-allowed; }
+.rank-opt .rn { font-family: var(--f-latin); font-size: 20px; color: var(--gold); grid-row: span 2; width: 1.6em; text-align: center; }
+.rank-opt b { font-family: var(--f-display); }
+.rank-opt span { font-size: 12px; color: var(--ash); }
+
+/* ===== 審判画面 ===== */
+.hud {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding-block: 8px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.hud-menu { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); color: var(--gold); font-size: 18px; }
+.hud-where { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.hud-where b { font-family: var(--f-display); font-weight: 800; font-size: 15px; letter-spacing: 0.08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-where span { font-size: 11px; color: var(--ash); letter-spacing: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-where .boss-tag { color: #e88a96; }
+.cred { display: flex; align-items: flex-end; gap: 3px; height: 30px; }
+.candle { position: relative; width: 8px; height: 18px; background: linear-gradient(90deg, #cfc2a6, #f2ead6 45%, #b9ab8e); border-radius: 1px 1px 2px 2px; }
+.candle::before { content: ''; position: absolute; left: 50%; top: -3px; width: 1px; height: 4px; background: #222; transform: translateX(-50%); }
+.candle .fl { position: absolute; left: 50%; bottom: 100%; width: 7px; height: 11px; margin-left: -3.5px; margin-bottom: 1px; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; background: radial-gradient(circle at 50% 70%, #fff6d6, #ffcf6b 40%, rgba(255, 120, 30, 0.7) 70%, transparent 72%); filter: drop-shadow(0 0 5px rgba(255, 190, 90, 0.9)); animation: flame 1.4s infinite ease-in-out alternate; transform-origin: 50% 100%; }
+.candle.out { filter: brightness(0.55); }
+.candle.out .fl { display: none; }
+.candle.snuff .fl { animation: snuff 0.8s forwards; }
+@keyframes flame { 0% { transform: scale(1, 1) rotate(-2deg); } 50% { transform: scale(0.92, 1.08) rotate(2deg); } 100% { transform: scale(1.04, 0.95) rotate(-1deg); } }
+@keyframes snuff { 60% { transform: scale(0.3, 1.6); opacity: 0.6; } 100% { transform: scale(0, 0); opacity: 0; } }
+.cred-n { font-family: var(--f-latin); font-size: 11px; color: var(--ash); margin-left: 4px; align-self: center; }
+.silver { display: flex; align-items: center; gap: 4px; font-family: var(--f-latin); color: var(--parch); font-size: 14px; font-variant-numeric: tabular-nums; }
+.coin { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #f4f1ea, #a9a59c 60%, #6d6a64); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3); }
+
+.countbar { flex: none; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding-block: 6px; font-size: 12px; color: var(--ash); letter-spacing: 0.04em; }
+.countbar b { font-family: var(--f-display); font-size: 15px; color: var(--parch); font-variant-numeric: tabular-nums; }
+.countbar .liars b { color: #ef8f9b; }
+.countbar .unr b { color: var(--ghost); }
+.countbar .hint { color: var(--gold); }
+
+.stage { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.board-wrap { flex: 0 0 auto; height: 50%; min-height: 0; display: grid; place-items: center; position: relative; }
+.board { display: grid; gap: var(--gap); grid-template-columns: repeat(var(--cols), var(--cw)); }
+.side { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 8px; }
+.side > * { flex: none; }
+
+@media (min-aspect-ratio: 5/4) {
+  .stage { flex-direction: row; gap: 14px; }
+  .board-wrap { flex: 1 1 58%; height: auto; }
+  .side { flex: 0 1 42%; max-width: 480px; min-width: 260px; }
+}
+
+/* ----- 札 ----- */
+.card { position: relative; width: var(--cw); height: calc(var(--cw) * 1.38); perspective: 700px; font-size: calc(var(--cw) * 0.13); }
+.card-in { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(.3, .7, .3, 1.15); }
+.card.flipped .card-in { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; overflow: hidden; }
+.face.back {
+  display: grid; place-items: center;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(201, 163, 91, 0.18), transparent 55%),
+    repeating-linear-gradient(45deg, rgba(201, 163, 91, 0.05) 0 2px, transparent 2px 9px),
+    linear-gradient(160deg, #3a1420, #1a0a10);
+  border: 1px solid var(--gold-dim);
+  box-shadow: inset 0 0 0 3px #1a0a10, inset 0 0 0 4px rgba(201, 163, 91, 0.45), 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+.face.back svg { width: 54%; height: auto; color: var(--gold); opacity: 0.85; }
+.face.back .num { color: var(--gold-hi); }
+.face.front {
+  transform: rotateY(180deg);
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #2a2120, #171213);
+  border: 1px solid var(--gold-dim);
+  box-shadow: inset 0 0 0 2px #171213, inset 0 0 0 3px rgba(201, 163, 91, 0.3), 0 6px 14px rgba(0, 0, 0, 0.55);
+}
+.num { position: absolute; z-index: 2; top: 3px; left: 5px; font-family: var(--f-display); font-weight: 800; font-size: 1.25em; line-height: 1.2; color: var(--parch); text-shadow: 0 1px 2px #000; }
+.por { position: relative; flex: 1 1 auto; min-height: 0; margin: 4px 4px 0; border-radius: 40% 40% 4px 4px / 30% 30% 4px 4px; overflow: hidden; border: 1px solid rgba(201, 163, 91, 0.35); }
+.por svg { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card-meta { flex: none; padding: 2px 3px 4px; text-align: center; line-height: 1.2; }
+.nm { font-family: var(--f-display); font-weight: 700; font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--parch); }
+.rl { display: flex; align-items: center; justify-content: center; gap: 0.3em; margin-top: 1px; font-size: 0.92em; color: var(--gold); white-space: nowrap; overflow: hidden; }
+.rl .glyph { width: 1.45em; height: 1.45em; font-size: 0.85em; }
+.card.open-evil .face.front { background: linear-gradient(180deg, #3a1219, #170609); border-color: var(--blood); }
+.card.open-evil .rl { color: #f19aa5; }
+.card.open-med .rl { color: var(--ghost); }
+
+.card:not(.flipped):hover .card-in { transform: translateY(-3px); }
+.card.selected .face { border-color: var(--gold-hi); box-shadow: inset 0 0 0 2px #171213, inset 0 0 0 3px var(--gold-hi), 0 0 0 2px rgba(232, 201, 135, 0.6), 0 0 24px rgba(232, 201, 135, 0.35); }
+.card.ref::after { content: ''; position: absolute; inset: -4px; border: 2px dashed var(--gold); border-radius: 9px; pointer-events: none; animation: refPulse 1.2s infinite ease-in-out; }
+@keyframes refPulse { 50% { opacity: 0.4; } }
+.card.guide::after { content: ''; position: absolute; inset: -5px; border: 2px solid var(--gold-hi); border-radius: 10px; pointer-events: none; animation: refPulse 0.9s infinite; box-shadow: 0 0 20px rgba(232, 201, 135, 0.6); }
+
+/* 札の上の印 */
+.mk {
+  position: absolute; z-index: 3; right: -5px; top: -5px;
+  width: 1.9em; height: 1.9em; min-width: 22px; min-height: 22px; display: grid; place-items: center; border-radius: 50%;
+  font-family: var(--f-display); font-weight: 800; font-size: 1.05em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7), inset 0 0 0 2px rgba(0, 0, 0, 0.18);
+  animation: stampIn 0.25s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+@keyframes stampIn { from { transform: scale(1.8); opacity: 0; } }
+.mk.white { background: var(--seal-white); color: #2a2320; }
+.mk.black { background: radial-gradient(circle at 40% 35%, #c33547, #6c1020); color: #fbe7e9; }
+.mk.unr { background: var(--ghost); color: #10202a; }
+.mk.q { background: var(--stone-3); color: var(--gold-hi); border: 1px solid var(--gold-dim); }
+.tags { position: absolute; z-index: 3; left: 3px; bottom: calc(100% - 3px - 1.6em); top: auto; display: none; }
+.chips { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); bottom: -7px; display: flex; gap: 2px; white-space: nowrap; }
+.chip { padding: 0 0.45em; border-radius: 3px; font-size: 0.8em; min-height: 1.5em; line-height: 1.5em; font-family: var(--f-display); font-weight: 700; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); }
+.chip.t { background: var(--moss); color: #10180a; }
+.chip.f { background: var(--blood); color: #fff; }
+.chip.holy-good { background: var(--seal-white); color: #222; }
+.chip.holy-evil { background: #2a0a10; color: #ff9aa8; border: 1px solid var(--blood); }
+.chip.aff { background: #3e2a4a; color: #e6c9f2; }
+.chip.id { background: var(--gold); color: var(--ink); }
+.seal-top { position: absolute; z-index: 3; left: -5px; top: -5px; }
+.seal-top .mk { position: static; animation: none; }
+
+/* 処刑と正体 */
+.card.executed .face.front { filter: grayscale(0.85) brightness(0.55); }
+.card.executed .face.back { filter: grayscale(0.85) brightness(0.55); }
+.verdict {
+  position: absolute; z-index: 4; left: 50%; top: 42%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  padding: 0.1em 0.5em; white-space: nowrap;
+  font-family: var(--f-display); font-weight: 800; font-size: 1.3em; letter-spacing: 0.1em;
+  border: 2px solid currentColor; border-radius: 3px; background: rgba(10, 6, 8, 0.75);
+  animation: verdictIn 0.45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+.verdict.evil { color: #ff6b7e; }
+.verdict.good { color: var(--seal-white); }
+.verdict.med { color: var(--ghost); }
+.verdict small { display: block; font-size: 0.62em; letter-spacing: 0.05em; text-align: center; }
+@keyframes verdictIn { from { transform: translate(-50%, -50%) rotate(-12deg) scale(2.2); opacity: 0; } }
+.card.reveal-evil .face { border-color: var(--blood); box-shadow: 0 0 0 2px var(--blood), 0 0 22px rgba(176, 40, 58, 0.55); }
+.card.shake { animation: shake 0.5s; }
+@keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-6px) rotate(-1deg); } 40%, 60% { transform: translateX(6px) rotate(1deg); } }
+.slash { position: absolute; z-index: 5; inset: 0; pointer-events: none; }
+.slash::before { content: ''; position: absolute; left: -10%; right: -10%; top: 50%; height: 3px; background: linear-gradient(90deg, transparent, #ff3b52, #fff, #ff3b52, transparent); transform: rotate(-35deg) scaleX(0); animation: slash 0.35s ease-out forwards; box-shadow: 0 0 12px #ff3b52; }
+@keyframes slash { to { transform: rotate(-35deg) scaleX(1); opacity: 0; } }
+.flash { position: absolute; inset: 0; z-index: 40; pointer-events: none; background: radial-gradient(circle, rgba(176, 40, 58, 0.45), rgba(80, 0, 10, 0.75)); animation: flash 0.7s ease-out forwards; }
+.flash.gold { background: radial-gradient(circle, rgba(232, 201, 135, 0.35), transparent 70%); }
+@keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+
+/* ----- 詳細パネル ----- */
+.panel { background: linear-gradient(180deg, rgba(31, 24, 30, 0.92), rgba(22, 17, 22, 0.92)); border: 1px solid var(--line); padding: 12px 14px; }
+.detail { min-height: 120px; }
+.dt-empty { color: var(--ash); font-size: 13px; }
+.dt-empty b { color: var(--parch); font-family: var(--f-display); }
+.dt-head { display: flex; gap: 12px; align-items: center; }
+.dt-por { flex: none; width: 52px; height: 68px; border-radius: 40% 40% 4px 4px / 30% 30% 4px 4px; overflow: hidden; border: 1px solid var(--gold-dim); }
+.dt-por svg { width: 100%; height: 100%; display: block; }
+.dt-name { font-family: var(--f-display); font-weight: 800; font-size: 18px; letter-spacing: 0.05em; line-height: 1.3; }
+.dt-role { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--gold); font-family: var(--f-display); font-weight: 700; }
+.dt-role .note { font-family: var(--f-ui); font-weight: 400; font-size: 11px; color: var(--ash); letter-spacing: 0.06em; }
+.dt-desc { margin: 8px 0 0; font-size: 12px; color: var(--ash); }
+.testimony {
+  position: relative; margin: 10px 0 0; padding: 10px 14px 10px 18px;
+  font-family: var(--f-display); font-size: 17px; line-height: 1.7; color: var(--parch);
+  background: rgba(0, 0, 0, 0.25); border-left: 2px solid var(--gold-dim);
+  min-height: 3.6em; cursor: pointer;
+}
+.testimony::before { content: '「'; position: absolute; left: 2px; top: 6px; color: var(--gold-dim); }
+.testimony .caret { display: inline-block; width: 0.5em; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--gold); animation: caret 0.8s infinite steps(1); }
+@keyframes caret { 50% { opacity: 0; } }
+.verdict-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.vl { font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); background: var(--stone); }
+.vl.t { border-color: var(--moss); color: #cfe6bd; }
+.vl.f { border-color: var(--blood); color: #f4c9ce; }
+.vl.g { border-color: var(--seal-white); color: var(--seal-white); }
+.vl.p { border-color: #8a5ca0; color: #e6c9f2; }
+.marks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.marks > span { font-size: 12px; color: var(--ash); margin-right: 2px; }
+.mbtn { min-width: 44px; min-height: 36px; padding: 0 10px; border: 1px solid var(--line); background: var(--stone); font-family: var(--f-display); font-weight: 800; }
+.mbtn.on.white { background: var(--seal-white); color: #222; }
+.mbtn.on.black { background: var(--blood); color: #fff; border-color: var(--blood); }
+.mbtn.on.unr { background: var(--ghost); color: #10202a; }
+.mbtn.on.q { background: var(--stone-3); color: var(--gold-hi); border-color: var(--gold); }
+.dt-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* ----- 証言録 ----- */
+.log h3 { margin: 0 0 6px; font-family: var(--f-display); font-size: 14px; letter-spacing: 0.2em; color: var(--gold); display: flex; justify-content: space-between; align-items: baseline; }
+.log h3 small { font-family: var(--f-ui); letter-spacing: 0.05em; color: var(--ash-dim); font-size: 11px; }
+.log ol { list-style: none; margin: 0; padding: 0; }
+.log li { display: grid; grid-template-columns: 1.6em 1fr auto; gap: 2px 8px; align-items: start; padding: 7px 4px; border-top: 1px dashed var(--line); cursor: pointer; }
+.log li:hover, .log li.on { background: rgba(201, 163, 91, 0.07); }
+.log li.dead { opacity: 0.55; }
+.log .ln { font-family: var(--f-display); font-weight: 800; color: var(--gold-hi); font-size: 15px; line-height: 1.5; }
+.log .lb { min-width: 0; }
+.log .lr { font-size: 11px; color: var(--ash); letter-spacing: 0.05em; }
+.log .lr .ord { color: var(--ash-dim); margin-left: 4px; }
+.log .lt { font-family: var(--f-display); font-size: 14px; line-height: 1.55; }
+.log .lm { display: flex; gap: 3px; align-items: center; }
+.log .lm .mk { position: static; animation: none; width: 22px; height: 22px; min-width: 0; min-height: 0; font-size: 12px; }
+.log-empty { color: var(--ash-dim); font-size: 12px; padding: 6px 0; }
+
+/* ----- 道具棚 ----- */
+.tools { flex: none; display: flex; align-items: center; gap: 8px; padding-block: 8px; border-top: 1px solid var(--line); padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)); }
+.items { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; }
+.slot { flex: none; display: flex; align-items: center; gap: 6px; min-height: 42px; padding: 4px 10px 4px 6px; border: 1px solid var(--line); background: var(--stone); font-family: var(--f-display); font-weight: 700; font-size: 13px; }
+.slot:hover { border-color: var(--gold-dim); }
+.slot.on { border-color: var(--gold-hi); box-shadow: 0 0 12px rgba(232, 201, 135, 0.4); }
+.slot.empty { color: var(--ash-dim); font-weight: 400; border-style: dashed; cursor: default; }
+.tbtn { flex: none; display: flex; gap: 6px; }
+.icon-btn { min-width: 42px; min-height: 42px; padding: 0 10px; border: 1px solid var(--line); font-family: var(--f-display); font-weight: 700; color: var(--gold); }
+.icon-btn:hover { border-color: var(--gold-dim); }
+.relic-strip { display: flex; flex-wrap: wrap; gap: 4px; }
+.relic-strip .glyph { font-size: 12px; cursor: help; }
+
+.target-hint { position: absolute; z-index: 8; left: 50%; top: 6px; transform: translateX(-50%); padding: 4px 14px; font-family: var(--f-display); background: var(--gold); color: var(--ink); white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); font-weight: 700; font-size: 13px; }
+
+/* ----- 手ほどき ----- */
+.guide-box {
+  position: absolute; z-index: 30; left: var(--gut-l); right: var(--gut-r); bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  margin: 0 auto; max-width: 560px; padding: 14px 16px;
+  background: rgba(12, 10, 13, 0.96); border: 1px solid var(--gold);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  font-family: var(--f-display); font-size: 15px; line-height: 1.75;
+  animation: modalIn 0.3s ease both;
+}
+.guide-inline { position: static; left: auto; right: auto; bottom: auto; margin: 0; max-width: none; padding: 10px 14px; font-size: 14px; flex: none; }
+.guide-box .who { font-size: 11px; letter-spacing: 0.3em; color: var(--gold); font-family: var(--f-latin); margin-bottom: 4px; }
+.guide-box .gf { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* ===== 審理終結・報酬・幕間 ===== */
+.overlay { position: absolute; inset: 0; z-index: 45; display: grid; place-items: center; padding: 16px var(--gut-r) 16px var(--gut-l); background: radial-gradient(circle, rgba(14, 11, 14, 0.93), rgba(5, 3, 5, 0.97)); animation: scrIn 0.6s ease both; overflow-y: auto; }
+.ov-inner { width: min(520px, 100%); text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; margin: auto; }
+.stamp-big { font-family: var(--f-display); font-weight: 800; font-size: clamp(38px, 11vw, 64px); letter-spacing: 0.25em; text-indent: 0.25em; color: var(--gold-hi); text-shadow: 0 0 28px rgba(201, 163, 91, 0.5); animation: bigIn 0.9s cubic-bezier(.2, 1.4, .4, 1) both; }
+.stamp-big.bad { color: #ff7d8e; text-shadow: 0 0 28px rgba(176, 40, 58, 0.7); }
+@keyframes bigIn { from { transform: scale(1.8); opacity: 0; filter: blur(8px); } }
+.ov-sub { font-family: var(--f-display); color: var(--ash); letter-spacing: 0.1em; }
+.ledger { width: 100%; text-align: left; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 8px 0; }
+.ledger div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 4px; font-size: 14px; }
+.ledger div span:last-child { font-family: var(--f-display); font-weight: 700; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.unlock-note { width: 100%; padding: 8px 12px; border: 1px solid var(--gold-dim); background: rgba(201, 163, 91, 0.08); font-family: var(--f-display); font-size: 14px; text-align: left; }
+
+.page { overflow-y: auto; padding-block: 20px 32px; }
+.page-inner { width: min(760px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.page h2 { margin: 0; font-family: var(--f-display); font-weight: 800; font-size: clamp(24px, 6vw, 32px); letter-spacing: 0.14em; text-align: center; color: var(--parch); text-wrap: balance; }
+.page .lead { text-align: center; color: var(--ash); font-family: var(--f-display); margin: 0; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.choice {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  padding: 20px 14px 16px; min-height: 180px;
+  background: linear-gradient(180deg, var(--stone-2), var(--stone));
+  border: 1px solid var(--gold-dim);
+  box-shadow: inset 0 0 0 4px var(--stone), inset 0 0 0 5px rgba(201, 163, 91, 0.18), 0 10px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s, border-color 0.2s;
+  animation: choiceIn 0.5s ease both;
+}
+.choice:nth-child(2) { animation-delay: 0.08s; } .choice:nth-child(3) { animation-delay: 0.16s; } .choice:nth-child(4) { animation-delay: 0.24s; }
+@keyframes choiceIn { from { opacity: 0; transform: translateY(12px); } }
+.choice:hover:not([disabled]) { transform: translateY(-3px); border-color: var(--gold); }
+.choice[disabled] { opacity: 0.45; cursor: not-allowed; }
+.choice .glyph { font-size: 26px; }
+.choice .kind { font-size: 10px; letter-spacing: 0.3em; color: var(--ash); font-family: var(--f-latin); text-transform: uppercase; }
+.choice b { font-family: var(--f-display); font-size: 17px; letter-spacing: 0.06em; }
+.choice p { margin: 0; font-size: 12px; color: var(--ash); }
+.choice .price { margin-top: auto; display: flex; align-items: center; gap: 4px; font-family: var(--f-latin); color: var(--parch); }
+.choice.sold::after { content: '売約'; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--f-display); font-size: 28px; font-weight: 800; color: #ff7d8e; background: rgba(10, 6, 8, 0.6); transform: rotate(-8deg); }
+@media (max-width: 560px) {
+  .choices { grid-template-columns: 1fr; gap: 10px; }
+  .choice { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto auto; column-gap: 14px; row-gap: 2px; align-items: center; text-align: left; min-height: 0; padding: 14px 16px; }
+  .choice .glyph { grid-row: 1 / span 3; font-size: 22px; }
+  .choice .kind { grid-column: 2; }
+  .choice b { grid-column: 2; }
+  .choice p { grid-column: 2; }
+  .choice .price { grid-column: 3; grid-row: 1 / span 3; margin: 0; }
+}
+.statusbar { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; align-items: center; color: var(--ash); font-size: 13px; }
+.statusbar .cred { height: 24px; }
+.center-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.story { font-family: var(--f-display); font-size: 16px; line-height: 2; text-align: center; color: var(--parch); max-width: 34em; margin: 0 auto; text-wrap: pretty; }
+.chap-title { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.chap-title span { font-family: var(--f-display); color: var(--gold); letter-spacing: 0.4em; font-size: 13px; text-indent: 0.4em; }
+.chap-title b { font-family: var(--f-display); font-weight: 800; font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.2em; text-indent: 0.2em; }
+.progress { display: flex; justify-content: center; gap: 6px; align-items: center; flex-wrap: wrap; }
+.progress i { width: 10px; height: 10px; transform: rotate(45deg); border: 1px solid var(--gold-dim); }
+.progress i.done { background: var(--gold); }
+.progress i.cur { background: var(--blood); border-color: var(--blood); box-shadow: 0 0 8px var(--blood); }
+.progress .sep { width: 18px; height: 1px; background: var(--gold-dim); }
+
+.setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.seg { display: flex; border: 1px solid var(--line); }
+.seg button { padding: 6px 12px; min-height: 36px; font-size: 13px; color: var(--ash); }
+.seg button.on { background: var(--gold); color: var(--ink); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.12s !important; }
+}
+@media (max-height: 520px) {
+  .hud { padding-block: 4px 3px; }
+  .countbar { padding-block: 2px; }
+  .tools { padding-block: 4px; }
+  .detail { min-height: 0; }
+}
+
+/* 横向きのスマホ：盤を左の全高に、右列に情報と道具を集める */
+@media (min-aspect-ratio: 5/4) and (max-height: 600px) {
+  .scr.trial {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 40%);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "hud hud" "board count" "board side" "board tools";
+    column-gap: 14px;
+  }
+  .scr.trial .stage { display: contents; }
+  .scr.trial .hud { grid-area: hud; }
+  .scr.trial .countbar { grid-area: count; font-size: 11px; gap: 2px 10px; }
+  .scr.trial .board-wrap { grid-area: board; height: auto; min-height: 0; padding-block: 4px; }
+  .scr.trial .side { grid-area: side; max-width: none; min-width: 0; }
+  .scr.trial .tools { grid-area: tools; border-top: 0; }
+  .scr.trial .hud-menu { width: 34px; height: 34px; }
+  .scr.trial .slot { min-height: 36px; font-size: 12px; padding: 2px 8px 2px 4px; }
+  .scr.trial .icon-btn { min-height: 36px; min-width: 36px; }
+  .testimony { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+(() => {
+/* ---- util.js ---- */
+/* ===== 汎用ユーティリティ ===== */
+
+function hashStr(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+
+class RNG {
+  constructor(seed) {
+    this.a = (typeof seed === 'string' ? hashStr(seed) : seed) >>> 0;
+  }
+  next() {
+    let t = (this.a = (this.a + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), 1 | t);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  int(n) { return Math.floor(this.next() * n); }
+  chance(p) { return this.next() < p; }
+  pick(arr) { return arr.length ? arr[this.int(arr.length)] : undefined; }
+  shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = this.int(i + 1);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  sample(arr, n) { return this.shuffle(arr).slice(0, n); }
+  weighted(items, wf) {
+    const ws = items.map(wf);
+    const tot = ws.reduce((x, y) => x + y, 0);
+    let r = this.next() * tot;
+    for (let i = 0; i < items.length; i++) { r -= ws[i]; if (r <= 0) return items[i]; }
+    return items[items.length - 1];
+  }
+}
+
+const CIRC = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+const circ = (i) => CIRC[i] || ('#' + (i + 1));
+const range = (n) => Array.from({ length: n }, (_, i) => i);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const KANJI_NUM = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+const store = {
+  get(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch (e) { return fallback; }
+  },
+  set(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) { /* 保存できない環境 */ }
+  },
+  del(key) {
+    try { localStorage.removeItem(key); } catch (e) { /* noop */ }
+  },
+};
+
+/* ---- data.js ---- */
+/* ===== ゲームデータ：身分・聖遺物・道具・章・階位 ===== */
+
+/*
+ * align:
+ *   good   … 無辜（常に真実を語る）
+ *   med    … 惑い者（善側。証言は当てにならない）
+ *   minion … 従者（虚偽者。嘘をつく）
+ *   boss   … 首魁（虚偽者。嘘をつく。審判全体に影響）
+ * open: true なら正体を隠さず名乗る
+ * unlock: 累計審判クリア数がこの値に達すると解禁（0 は最初から）
+ */
+const ROLES = [
+  // ---------- 無辜 ----------
+  { id: 'watch', name: '番人', glyph: '番', align: 'good', unlock: 0,
+    desc: '自分の上下左右に、虚偽者が何人いるかを語る。',
+    lore: '夜ごと門の灯を守る者。目に入るものしか信じない。' },
+  { id: 'nightwatch', name: '夜警', glyph: '夜', align: 'good', unlock: 0,
+    desc: '自分の周囲八方（斜めを含む）に、虚偽者が何人いるかを語る。',
+    lore: '眠らぬ瞳。斜めの影さえ見逃さない。' },
+  { id: 'seer', name: '占い師', glyph: '占', align: 'good', unlock: 0,
+    desc: '誰か一人について、虚偽者であるかどうかを語る。',
+    lore: '水晶に映るは一人の魂のみ。' },
+  { id: 'balance', name: '天秤師', glyph: '秤', align: 'good', unlock: 0,
+    desc: '二人を名指しし、「そのうちちょうど一人が虚偽者だ」と語る。',
+    lore: '片方の皿だけが沈むのを、彼は知っている。' },
+  { id: 'surveyor', name: '測量士', glyph: '測', align: 'good', unlock: 0,
+    desc: '自分と同じ横一列（自分を除く）に、虚偽者が何人いるかを語る。',
+    lore: '縄と杭で、村の境を測ってきた。' },
+  { id: 'mason', name: '石工', glyph: '石', align: 'good', unlock: 0,
+    desc: '自分と同じ縦一列（自分を除く）に、虚偽者が何人いるかを語る。',
+    lore: '積み上げた石の歪みを、指先で知る。' },
+  { id: 'nun', name: '修道女', glyph: '修', align: 'good', unlock: 0,
+    desc: '誰か一人を「善良な者だ（虚偽者ではない）」と保証する。',
+    lore: '祈りは庇護のためにある。' },
+  { id: 'accuser', name: '告発人', glyph: '告', align: 'good', unlock: 0,
+    desc: '誰か一人を「虚偽者だ」と告発する。',
+    lore: '指を差す覚悟だけは、誰にも負けない。' },
+  { id: 'gate', name: '門番', glyph: '門', align: 'good', unlock: 0,
+    desc: '自分の上下左右に、虚偽者が「いる」か「いない」かを語る。',
+    lore: '問うのは一つ。通すか、通さぬか。' },
+  { id: 'priest', name: '司祭', glyph: '司', align: 'good', unlock: 0,
+    desc: '二人を名指しし、同じ陣営か異なる陣営かを語る。（陣営＝虚偽者か、そうでないか）',
+    lore: '告解の重みで、魂の色を量る。' },
+  { id: 'confessor', name: '懺悔僧', glyph: '懺', align: 'good', unlock: 0,
+    desc: '二人を名指しし、「少なくともどちらかは虚偽者だ」と語る。',
+    lore: '聞いた罪の数だけ、皺が深い。' },
+  { id: 'locksmith', name: '鍵師', glyph: '鍵', align: 'good', unlock: 0,
+    desc: '三人を名指しし、その中に虚偽者が何人いるかを語る。',
+    lore: '三つの錠前、開くのはいくつか。' },
+  { id: 'bell', name: '鐘撞き', glyph: '鐘', align: 'good', unlock: 3, lazy: true,
+    desc: '「自分より先に尋問された者たち」の中に、虚偽者が何人いるかを語る。尋問の順番が重要。',
+    lore: '鐘は数える。鳴らされた順に。' },
+  { id: 'hunter', name: '猟師', glyph: '猟', align: 'good', unlock: 5,
+    desc: '自分に最も近い虚偽者（自分以外）までの距離を語る。距離は上下左右に何歩で辿り着くか。',
+    lore: '獣の匂いは、歩数で測る。' },
+  { id: 'scribe', name: '写字生', glyph: '写', align: 'good', unlock: 9,
+    desc: '番号が偶数（または奇数）の者たちの中に、虚偽者が何人いるかを語る。',
+    lore: '帳簿の偶数頁ばかり、なぜか汚れている。' },
+  { id: 'doctor', name: '医師', glyph: '医', align: 'good', unlock: 13,
+    desc: '誰か一人について、惑い者であるかどうかを語る。',
+    lore: '熱、震え、虚ろな目。病は嘘をつかない。' },
+  { id: 'grave', name: '墓守', glyph: '墓', align: 'good', unlock: 15, lazy: true,
+    desc: '直前に尋問された者について、虚偽者かどうかを語る。（最初に尋問した場合は、誰か一人について語る）',
+    lore: '去った者の足跡を、土が覚えている。' },
+  { id: 'bard', name: '吟遊詩人', glyph: '詩', align: 'good', unlock: 21,
+    desc: '上下左右に隣り合った虚偽者どうしの組が、「ある」か「ない」かを語る。',
+    lore: '狼は群れる、と歌は言う。' },
+  { id: 'herbal', name: '薬草師', glyph: '薬', align: 'good', unlock: 24,
+    desc: '自分の周囲八方に、惑い者が何人いるかを語る。',
+    lore: '毒草と薬草は、根の匂いで見分ける。' },
+  { id: 'mirror', name: '鏡職人', glyph: '鏡', align: 'good', unlock: 30,
+    desc: '誰か一人の証言が、真実か偽りかを語る。',
+    lore: '鏡は言葉さえ映し返す。' },
+  { id: 'carto', name: '地図師', glyph: '図', align: 'good', unlock: 33,
+    desc: '盤の四隅にいる者たちの中に、虚偽者が何人いるかを語る。',
+    lore: '地図の端には、いつも怪物が描かれる。' },
+  { id: 'numer', name: '数秘術師', glyph: '数', align: 'good', unlock: 40,
+    desc: '虚偽者全員の番号を足した数が、奇数か偶数かを語る。',
+    lore: '数は魂の影。和は運命の形。' },
+
+  // ---------- 惑い者 ----------
+  { id: 'drunk', name: '酔いどれ', glyph: '酔', align: 'med', unlock: 0, policy: 'R',
+    desc: '自分を別の無辜の身分だと思い込んでいる。証言は真実のことも偽りのこともある。処刑すると信用−1。',
+    lore: '杯の底に、本当の自分を落としてきた。' },
+  { id: 'jester', name: '道化', glyph: '道', align: 'med', unlock: 0, open: true, policy: 'R', execCost: 3,
+    desc: '正体を隠さない。証言は当てにならない。処刑すると民衆の怒りを買い、信用−3。',
+    lore: '笑わせた数だけ、恨みも買った。' },
+  { id: 'sleepwalker', name: '夢遊病者', glyph: '夢', align: 'med', unlock: 11, policy: 'F',
+    desc: '自分を別の無辜の身分だと思い込み、夢の中の出来事を語る。証言は必ず偽りになる。処刑すると信用−1。',
+    lore: '夜ごと歩き、見てもいない景色を語る。' },
+  { id: 'zealot', name: '狂信者', glyph: '狂', align: 'med', unlock: 27, open: true, policy: 'R',
+    desc: '正体を隠さない。誰かを「虚偽者だ」と叫ぶが、当たるとは限らない。処刑すると信用−1。',
+    lore: '炎は罪人も聖人も区別しない。' },
+
+  // ---------- 従者 ----------
+  { id: 'perjurer', name: '偽証人', glyph: '偽', align: 'minion', unlock: 0,
+    desc: '無辜の身分を騙り、その身分の作法で嘘をつく。',
+    lore: '口を開けば、滑らかに偽りが零れる。' },
+  { id: 'poisoner', name: '毒婦', glyph: '毒', align: 'minion', unlock: 0, open: true,
+    desc: '正体を隠さない。周囲八方の無辜一人に毒を盛り、惑い者にする（毒を受けた者の証言は当てにならない）。毒を盛った相手について嘘をつく。',
+    lore: '杯を差し出す手は、いつも優しい。' },
+  { id: 'spy', name: '密偵', glyph: '密', align: 'minion', unlock: 7,
+    desc: '無辜の身分を騙り、嘘をつく。聖水を受けても「善」と出る。',
+    lore: '聖水の冷たささえ、演技のうち。' },
+  { id: 'mimic', name: '変装師', glyph: '変', align: 'minion', unlock: 18,
+    desc: '実際に盤上にいる無辜と同じ身分を騙る。善側の身分は重複しないため、同じ身分が二人いれば片方は偽物。',
+    lore: '顔も声も、そっくり盗んでみせる。' },
+  { id: 'agitator', name: '扇動者', glyph: '扇', align: 'minion', unlock: 36, open: true,
+    desc: '正体を隠さない。生きている間、誤った処刑の信用減少が＋1される。無辜を虚偽者だと告発する。',
+    lore: '群衆の怒りは、薪より良く燃える。' },
+
+  // ---------- 首魁 ----------
+  { id: 'wolfking', name: '狼の王', glyph: '狼', align: 'boss', unlock: 0,
+    desc: '無辜の身分を騙り、嘘をつく。周囲八方の無辜一人を魅了し、惑い者にする（魅了された者の証言は必ず偽りになる）。',
+    lore: '牙を隠し、群れの長として微笑む。' },
+  { id: 'bishop', name: '黒衣の司教', glyph: '黒', align: 'boss', unlock: 0,
+    desc: '無辜の身分を騙り、嘘をつく。盤上の無辜二人に毒を盛り、惑い者にする。',
+    lore: '聖杯に満たされたのは、葡萄酒ではなかった。' },
+  { id: 'masked', name: '仮面の判事', glyph: '仮', align: 'boss', unlock: 45,
+    desc: '無辜の身分を騙り、嘘をつく。聖水では「善」と出て、蝋燭の灯は偽りの身分を映す。',
+    lore: '裁く者の仮面の下を、誰も見たことがない。' },
+  { id: 'lord', name: '偽りの廷主', glyph: '廷', align: 'boss', unlock: 0, finalOnly: true,
+    desc: '無辜の身分を騙り、嘘をつく。無辜一人に毒を、もう一人に魅了をかける。聖水では「善」と出る。',
+    lore: 'この廷のすべての嘘は、彼のために編まれた。' },
+];
+const ROLE = Object.fromEntries(ROLES.map((r) => [r.id, r]));
+const ALIGN_LABEL = { good: '無辜', med: '惑い者', minion: '従者', boss: '首魁' };
+
+/* ===== 道具 ===== */
+const ITEMS = [
+  { id: 'holywater', name: '聖水', glyph: '水', price: 18, target: 'any',
+    desc: '一人に聖水を垂らし、善か悪かを見極める。（一部の虚偽者は「善」と偽る）' },
+  { id: 'scales', name: '真偽の秤', glyph: '秤', price: 20, target: 'flipped',
+    desc: '尋問済みの一人の証言が、真実か偽りかを量る。' },
+  { id: 'candle', name: '審問の蝋燭', glyph: '燭', price: 26, target: 'any',
+    desc: '一人の真の身分を照らし出す。（仮面の判事には欺かれる）' },
+  { id: 'pardon', name: '赦免状', glyph: '赦', price: 15, target: 'none',
+    desc: '使うと、この審判で次に誤った処刑をしても信用が減らない。' },
+  { id: 'wine', name: '葡萄酒', glyph: '葡', price: 16, target: 'none',
+    desc: '信用を2回復する。' },
+  { id: 'lily', name: '白百合', glyph: '百', price: 15, target: 'none',
+    desc: 'まだ明らかでない無辜を一人、白として示す。' },
+];
+const ITEM = Object.fromEntries(ITEMS.map((r) => [r.id, r]));
+
+/* ===== 聖遺物 ===== */
+const RELICS = [
+  { id: 'tenbin', name: '銀の天秤', glyph: '天', unlock: 'base',
+    desc: '各審判で、無作為な一人の証言の真偽が、尋問した時に明らかになる。' },
+  { id: 'gantai', name: '盲目の聖女の眼帯', glyph: '眼', unlock: 'base',
+    desc: '各審判の開始時、無作為な無辜一人が白として示される。' },
+  { id: 'seiyaku', name: '鉄の誓約', glyph: '誓', unlock: 'base',
+    desc: '最大信用＋2。手に入れた時、信用＋2。' },
+  { id: 'hoten', name: '古き法典', glyph: '典', unlock: 'base',
+    desc: '各審判で最初の誤った処刑による信用減少を1軽くする。' },
+  { id: 'kitosho', name: '灰の祈祷書', glyph: '祈', unlock: 'base',
+    desc: '誤った処刑なしで審判を終えると、信用＋1。' },
+  { id: 'yubiwa', name: '告発者の指輪', glyph: '環', unlock: 'base',
+    desc: '虚偽者を処刑するたび、銀貨＋4。' },
+  { id: 'gaito', name: '審問官の外套', glyph: '套', unlock: 'base',
+    desc: '道具を持てる数＋1。' },
+  { id: 'seihai', name: '聖灰の小瓶', glyph: '灰', unlock: 'base',
+    desc: '各審判の開始時、33%の確率で聖水を得る。' },
+  { id: 'kagi', name: '錆びた鍵', glyph: '鍵', unlock: 'base',
+    desc: '行商人の品がすべて3割引きになる。' },
+  { id: 'karasu', name: '鴉の眼', glyph: '鴉', unlock: 'ch1',
+    desc: '処刑した者の周囲八方に、虚偽者が何人いたかがわかる。' },
+  { id: 'kiba', name: '狼の牙', glyph: '牙', unlock: 'ch2',
+    desc: '首魁のいる審判で、首魁がいる横一列がわかる。' },
+  { id: 'hakkotsu', name: '白骨の指', glyph: '骨', unlock: 'ch3',
+    desc: '毒や魅了を受けた者を尋問すると、その印が浮かぶ。' },
+  { id: 'shokan', name: '蝋封の書簡', glyph: '封', unlock: 't20',
+    desc: '各審判の開始時、惑い者が一人判明する（いれば）。' },
+  { id: 'kuroneko', name: '黒猫の骨', glyph: '猫', unlock: 't12',
+    desc: '誤った処刑の時、50%の確率で信用が減らない。' },
+  { id: 'kanenoshita', name: '鐘の舌', glyph: '舌', unlock: 't6',
+    desc: '各審判で最初に尋問した者の証言の真偽がわかる。' },
+  { id: 'sakazuki', name: '秘蹟の杯', glyph: '杯', unlock: 'win',
+    desc: '審判後の報酬の選択肢が1つ増える。' },
+];
+const RELIC = Object.fromEntries(RELICS.map((r) => [r.id, r]));
+const RELIC_UNLOCK_LABEL = {
+  base: '最初から', ch1: '第一章を突破する', ch2: '第二章を突破する', ch3: '第三章を突破する',
+  win: '偽りの廷を裁く', t6: '累計6審判を終える', t12: '累計12審判を終える', t20: '累計20審判を終える',
+};
+
+/* ===== 章構成 =====
+ * R,C: 盤の行・列 / k: 虚偽者数（首魁を含む）/ m: 生来の惑い者数 / boss: 首魁
+ */
+const CHAPTERS = [
+  { name: '霧の寒村', no: '第一章', boss: 'wolfking',
+    intro: '霧に閉ざされた寒村で、家畜が喉を裂かれた。村人たちは互いを見つめ、口を閉ざしている。',
+    trials: [{ R: 2, C: 3, k: 1, m: 0 }, { R: 2, C: 3, k: 2, m: 0 }, { R: 2, C: 4, k: 2, m: 0, boss: true }] },
+  { name: '灰の港町', no: '第二章', boss: 'bishop',
+    intro: '灰が降る港町。積み荷と一緒に、偽りもまた陸へ揚げられた。',
+    trials: [{ R: 2, C: 4, k: 2, m: 0 }, { R: 3, C: 3, k: 2, m: 1 }, { R: 3, C: 3, k: 3, m: 0, boss: true }] },
+  { name: '鐘楼の都', no: '第三章', boss: 'masked',
+    intro: '鐘の音が絶えない都。鳴らされた順に、人は嘘を重ねてゆく。',
+    trials: [{ R: 3, C: 3, k: 2, m: 1 }, { R: 3, C: 4, k: 3, m: 1 }, { R: 3, C: 4, k: 3, m: 1, boss: true }] },
+  { name: '大聖堂', no: '第四章', boss: 'any',
+    intro: '聖なる穹窿の下、祈りの声に紛れて、囁きが交わされている。',
+    trials: [{ R: 3, C: 4, k: 3, m: 1 }, { R: 3, C: 4, k: 3, m: 2 }, { R: 3, C: 4, k: 4, m: 1, boss: true }] },
+  { name: '偽りの廷', no: '終章', boss: 'lord', final: true,
+    intro: 'すべての嘘が流れ着く場所。審問官よ、最後の法廷に立て。',
+    trials: [{ R: 3, C: 4, k: 4, m: 1, boss: true }] },
+];
+
+/* ===== 階位（難易度） ===== */
+const RANKS = [
+  { name: '見習い審問官', desc: '標準の審問。' },
+  { name: '助祭審問官', desc: '開始時の信用−1。' },
+  { name: '司祭審問官', desc: '第二章以降、惑い者が1人増える。' },
+  { name: '司教審問官', desc: '審判後の報酬の選択肢が1つ減る。' },
+  { name: '大司教審問官', desc: '第三章以降、虚偽者が1人増える。' },
+  { name: '枢機卿審問官', desc: '誤った処刑による信用減少が＋1される。' },
+];
+
+const BASE_CRED = 6;
+
+const NAMES = [
+  'エルマ', 'ヨハン', 'ギーゼラ', 'マティアス', 'リーゼル', 'オスヴァルト', 'ヘルガ', 'ベルント', 'イルザ',
+  'コンラート', 'ドロテア', 'フリーダ', 'ゲルト', 'ハンナ', 'ルートヴィヒ', 'アグネス', 'ヴィルマ', 'クラウス',
+  'ミルダ', 'テオバルト', 'ウルスラ', 'ローザ', 'ファルク', 'エッダ', 'ニコラス', 'マルタ', 'ディートリヒ',
+  'ゾフィー', 'アルブレヒト', 'ベアタ', 'カスパー', 'ヘドヴィヒ', 'ルーカス', 'オディール', 'ヴェンデル',
+  'グレーテ', 'ラザルス', 'アンセルム', 'セラフィナ', 'バルタザール', 'エーミール', 'ティルダ', 'ノルベルト',
+  'イーダ', 'レオポルト', 'フーゴ', 'ジルケ', 'ベネディクト', 'カタリナ', 'ヴォルフラム', 'ミヒャエラ', 'オトマール',
+];
+
+/* ---- logic.js ---- */
+/* ===== 盤面の論理：幾何・証言生成・真偽判定・ソルバー・審判生成 ===== */
+
+const REF = (j) => '⟦' + j + '⟧';
+
+const geoCache = {};
+function geo(R, C) {
+  const key = R + 'x' + C;
+  if (geoCache[key]) return geoCache[key];
+  const n = R * C;
+  const pos = range(n).map((i) => ({ r: Math.floor(i / C), c: i % C }));
+  const at = (r, c) => (r >= 0 && r < R && c >= 0 && c < C ? r * C + c : -1);
+  const adj4 = [], adj8 = [], row = [], col = [];
+  for (let i = 0; i < n; i++) {
+    const { r, c } = pos[i];
+    adj4[i] = [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dr, dc]) => at(r + dr, c + dc)).filter((x) => x >= 0);
+    const a8 = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (dr || dc) { const x = at(r + dr, c + dc); if (x >= 0) a8.push(x); }
+    }
+    adj8[i] = a8;
+    row[i] = range(C).map((cc) => at(r, cc)).filter((x) => x !== i);
+    col[i] = range(R).map((rr) => at(rr, c)).filter((x) => x !== i);
+  }
+  const dist = (a, b) => Math.abs(pos[a].r - pos[b].r) + Math.abs(pos[a].c - pos[b].c);
+  const corners = [at(0, 0), at(0, C - 1), at(R - 1, 0), at(R - 1, C - 1)];
+  const even = range(n).filter((i) => (i + 1) % 2 === 0);
+  const odd = range(n).filter((i) => (i + 1) % 2 === 1);
+  const g = { R, C, n, pos, adj4, adj8, row, col, dist, corners, even, odd };
+  geoCache[key] = g;
+  return g;
+}
+
+const cntIn = (M, s) => { let x = 0; for (const i of s) if (M[i]) x++; return x; };
+
+function hasAdjPair(E, g) {
+  for (let i = 0; i < g.n; i++) if (E[i]) for (const j of g.adj4[i]) if (j > i && E[j]) return true;
+  return false;
+}
+function nearestEvil(E, g, i) {
+  let best = Infinity;
+  for (let j = 0; j < g.n; j++) if (j !== i && E[j]) best = Math.min(best, g.dist(i, j));
+  return best;
+}
+
+/* 主張（pred）の真偽を仮説 E（虚偽者）・U（惑い者）で評価 */
+function evalPred(p, E, U, g, stmts) {
+  switch (p.t) {
+    case 'cnt': return cntIn(E, p.s) === p.v;
+    case 'any': return (cntIn(E, p.s) > 0) === p.b;
+    case 'ev': return !!E[p.j] === p.b;
+    case 'one': return (E[p.a] ? 1 : 0) + (E[p.b] ? 1 : 0) === 1;
+    case 'same': return (!!E[p.a] === !!E[p.b]) === p.same;
+    case 'ucnt': return cntIn(U, p.s) === p.v;
+    case 'unr': return !!U[p.j] === p.b;
+    case 'pair': return hasAdjPair(E, g) === p.b;
+    case 'dist': return nearestEvil(E, g, p.i) === p.v;
+    case 'par': {
+      let s = 0; for (let i = 0; i < g.n; i++) if (E[i]) s += i + 1;
+      return s % 2 === p.v;
+    }
+    case 'stmt': {
+      const st = stmts && stmts[p.j];
+      if (!st || st.pred.t === 'stmt') return true;
+      return evalPred(st.pred, E, U, g, stmts) === p.b;
+    }
+    case 'none': return true;
+    default: return true;
+  }
+}
+const dependsOnU = (p) => p.t === 'ucnt' || p.t === 'unr' || p.t === 'stmt';
+
+/* ===== 証言の生成 =====
+ * gen(ctx, i, want, rng) → { text, pred, refs } | null
+ * want: この証言を真にするか偽にするか
+ */
+function countClaim(ctx, s, want, rng, maxOverride) {
+  const v = cntIn(ctx.E, s);
+  if (want) return v;
+  const max = maxOverride != null ? maxOverride : Math.min(s.length, ctx.k);
+  const opts = [];
+  for (let x = 0; x <= max; x++) if (x !== v) opts.push(x);
+  if (!opts.length) return null;
+  // 真値に近い嘘ほど選ばれやすい
+  return rng.weighted(opts, (x) => 1 / (1 + Math.abs(x - v)));
+}
+function cntStmt(ctx, s, want, rng, txt, maxOverride) {
+  const v = countClaim(ctx, s, want, rng, maxOverride);
+  if (v == null) return null;
+  return { text: txt(v), pred: { t: 'cnt', s: s.slice(), v }, refs: s.slice() };
+}
+const others = (ctx, i) => range(ctx.g.n).filter((x) => x !== i);
+function pairs(list) {
+  const out = [];
+  for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) out.push([list[a], list[b]]);
+  return out;
+}
+const sortN = (arr) => arr.slice().sort((a, b) => a - b);
+
+const GEN = {
+  watch(ctx, i, want, rng) {
+    return cntStmt(ctx, ctx.g.adj4[i], want, rng, (v) => `私の上下左右に、虚偽者は${v}人いる。`);
+  },
+  nightwatch(ctx, i, want, rng) {
+    return cntStmt(ctx, ctx.g.adj8[i], want, rng, (v) => `私の周囲八方に、虚偽者は${v}人いる。`);
+  },
+  seer(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i));
+    const b = want ? !!ctx.E[j] : !ctx.E[j];
+    return { text: b ? `${REF(j)}は虚偽者だ。` : `${REF(j)}は虚偽者ではない。`, pred: { t: 'ev', j, b }, refs: [j] };
+  },
+  balance(ctx, i, want, rng) {
+    const ps = pairs(others(ctx, i)).filter(([a, b]) => ((ctx.E[a] ? 1 : 0) + (ctx.E[b] ? 1 : 0) === 1) === want);
+    const p = rng.pick(ps);
+    if (!p) return null;
+    const [a, b] = sortN(p);
+    return { text: `${REF(a)}と${REF(b)}のうち、虚偽者はちょうど一人だ。`, pred: { t: 'one', a, b }, refs: [a, b] };
+  },
+  surveyor(ctx, i, want, rng) {
+    return cntStmt(ctx, ctx.g.row[i], want, rng, (v) => `私と同じ横一列には、私を除いて虚偽者が${v}人いる。`);
+  },
+  mason(ctx, i, want, rng) {
+    return cntStmt(ctx, ctx.g.col[i], want, rng, (v) => `私と同じ縦一列には、私を除いて虚偽者が${v}人いる。`);
+  },
+  nun(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i).filter((x) => !!ctx.E[x] !== want));
+    if (j == null) return null;
+    return { text: `${REF(j)}は善良な者だ。私が保証しよう。`, pred: { t: 'ev', j, b: false }, refs: [j] };
+  },
+  accuser(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i).filter((x) => !!ctx.E[x] === want));
+    if (j == null) return null;
+    return { text: `${REF(j)}は虚偽者だ！`, pred: { t: 'ev', j, b: true }, refs: [j] };
+  },
+  gate(ctx, i, want, rng) {
+    const s = ctx.g.adj4[i];
+    const truth = cntIn(ctx.E, s) > 0;
+    const b = want ? truth : !truth;
+    return { text: b ? '私の上下左右に、虚偽者がいる。' : '私の上下左右に、虚偽者はいない。', pred: { t: 'any', s: s.slice(), b }, refs: s.slice() };
+  },
+  priest(ctx, i, want, rng) {
+    const [a, b] = sortN(rng.sample(others(ctx, i), 2));
+    const truth = !!ctx.E[a] === !!ctx.E[b];
+    const same = want ? truth : !truth;
+    return {
+      text: same ? `${REF(a)}と${REF(b)}は、同じ陣営に属している。` : `${REF(a)}と${REF(b)}は、異なる陣営に属している。`,
+      pred: { t: 'same', a, b, same }, refs: [a, b],
+    };
+  },
+  confessor(ctx, i, want, rng) {
+    const ps = pairs(others(ctx, i)).filter(([a, b]) => (!!ctx.E[a] || !!ctx.E[b]) === want);
+    const p = rng.pick(ps);
+    if (!p) return null;
+    const [a, b] = sortN(p);
+    return { text: `${REF(a)}か${REF(b)}、少なくともどちらかは虚偽者だ。`, pred: { t: 'any', s: [a, b], b: true }, refs: [a, b] };
+  },
+  locksmith(ctx, i, want, rng) {
+    const s = sortN(rng.sample(others(ctx, i), 3));
+    return cntStmt(ctx, s, want, rng, (v) => `${REF(s[0])}・${REF(s[1])}・${REF(s[2])}の中に、虚偽者は${v}人いる。`);
+  },
+  bell(ctx, i, want, rng) {
+    const pre = ctx.prefix || [];
+    if (!pre.length) {
+      if (want) return { text: '私が最初に呼ばれた。まだ鐘は一つも鳴っていない。', pred: { t: 'cnt', s: [], v: 0 }, refs: [] };
+      const v = 1 + rng.int(Math.max(1, Math.min(2, ctx.k)));
+      return { text: `私より先に尋問された者の中に、虚偽者は${v}人いる。`, pred: { t: 'cnt', s: [], v }, refs: [] };
+    }
+    return cntStmt(ctx, pre, want, rng, (v) => `私より先に尋問された${pre.length}人の中に、虚偽者は${v}人いる。`, Math.min(pre.length, ctx.k) || 1);
+  },
+  hunter(ctx, i, want, rng) {
+    const d = nearestEvil(ctx.E, ctx.g, i);
+    if (!isFinite(d)) return null;
+    let v = d;
+    if (!want) {
+      let maxD = 0; for (let j = 0; j < ctx.g.n; j++) maxD = Math.max(maxD, ctx.g.dist(i, j));
+      const opts = range(maxD).map((x) => x + 1).filter((x) => x !== d);
+      if (!opts.length) return null;
+      v = rng.weighted(opts, (x) => 1 / (1 + Math.abs(x - d)));
+    }
+    return { text: `私に最も近い虚偽者は、${v}歩先にいる。`, pred: { t: 'dist', i, v }, refs: [] };
+  },
+  scribe(ctx, i, want, rng) {
+    const even = rng.chance(0.5);
+    const s = even ? ctx.g.even : ctx.g.odd;
+    return cntStmt(ctx, s, want, rng, (v) => `番号が${even ? '偶数' : '奇数'}の者たちの中に、虚偽者は${v}人いる。`);
+  },
+  doctor(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i));
+    const truth = !!ctx.U[j];
+    const b = want ? truth : !truth;
+    return { text: b ? `${REF(j)}は惑い者だ。` : `${REF(j)}は惑い者ではない。`, pred: { t: 'unr', j, b }, refs: [j] };
+  },
+  grave(ctx, i, want, rng) {
+    const j = ctx.prev != null ? ctx.prev : rng.pick(others(ctx, i));
+    const b = want ? !!ctx.E[j] : !ctx.E[j];
+    const lead = ctx.prev != null ? '直前に尋問された' : 'まだ誰も尋問されていないが……';
+    return { text: `${lead}${REF(j)}は、${b ? '虚偽者だ' : '虚偽者ではない'}。`, pred: { t: 'ev', j, b }, refs: [j] };
+  },
+  bard(ctx, i, want, rng) {
+    const truth = hasAdjPair(ctx.E, ctx.g);
+    const b = want ? truth : !truth;
+    return {
+      text: b ? '上下左右に隣り合っている虚偽者どうしがいる。' : '虚偽者どうしは、上下左右に隣り合っていない。',
+      pred: { t: 'pair', b }, refs: [],
+    };
+  },
+  herbal(ctx, i, want, rng) {
+    const s = ctx.g.adj8[i];
+    const v = cntIn(ctx.U, s);
+    let c = v;
+    if (!want) {
+      const opts = range(Math.min(s.length, ctx.u) + 1).filter((x) => x !== v);
+      if (!opts.length) return null;
+      c = rng.pick(opts);
+    }
+    return { text: `私の周囲八方に、惑い者は${c}人いる。`, pred: { t: 'ucnt', s: s.slice(), v: c }, refs: s.slice() };
+  },
+  mirror(ctx, i, want, rng) {
+    const cands = others(ctx, i).filter((j) => ctx.stmts[j] && ctx.stmts[j].pred.t !== 'stmt');
+    const j = rng.pick(cands);
+    if (j == null) return null;
+    const truth = evalPred(ctx.stmts[j].pred, ctx.E, ctx.U, ctx.g, ctx.stmts);
+    const b = want ? truth : !truth;
+    return { text: b ? `${REF(j)}の証言は真実だ。` : `${REF(j)}の証言は偽りだ。`, pred: { t: 'stmt', j, b }, refs: [j] };
+  },
+  carto(ctx, i, want, rng) {
+    const s = [...new Set(ctx.g.corners)];
+    return cntStmt(ctx, s, want, rng, (v) => `盤の四隅にいる者たちの中に、虚偽者は${v}人いる。`);
+  },
+  numer(ctx, i, want, rng) {
+    let s = 0; for (let j = 0; j < ctx.g.n; j++) if (ctx.E[j]) s += j + 1;
+    const truth = s % 2;
+    const v = want ? truth : 1 - truth;
+    return { text: `虚偽者全員の番号を足すと、${v ? '奇数' : '偶数'}になる。`, pred: { t: 'par', v }, refs: [] };
+  },
+  // ----- 正体を隠さない者たち -----
+  jester(ctx, i, want, rng) {
+    const s = GEN.seer(ctx, i, want, rng);
+    s.text = 'ひひっ、教えてやろうか。' + s.text;
+    return s;
+  },
+  zealot(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i).filter((x) => !!ctx.E[x] === want));
+    if (j == null) return null;
+    return { text: `火刑だ！ ${REF(j)}こそ虚偽者だ！`, pred: { t: 'ev', j, b: true }, refs: [j] };
+  },
+  poisoner(ctx, i, want, rng) {
+    let pool = ctx.g.adj8[i].filter((x) => !ctx.E[x] && !!ctx.U[x] === want);
+    if (!pool.length) pool = others(ctx, i).filter((x) => !ctx.E[x] && !!ctx.U[x] === want);
+    const j = rng.pick(pool);
+    if (j == null) return null;
+    return { text: `ふふ……${REF(j)}の杯に、毒を垂らしておいたわ。`, pred: { t: 'unr', j, b: true }, refs: [j] };
+  },
+  agitator(ctx, i, want, rng) {
+    const j = rng.pick(others(ctx, i).filter((x) => !!ctx.E[x] === want));
+    if (j == null) return null;
+    return { text: `皆の者、聞け！ ${REF(j)}は虚偽者だ！ 吊るせ！`, pred: { t: 'ev', j, b: true }, refs: [j] };
+  },
+};
+
+/* ===== ソルバー：公開情報と矛盾しない「虚偽者の組」を数える ===== */
+function forCombos(pool, k, fn) {
+  const n = pool.length;
+  if (k > n) return;
+  const idx = range(k);
+  if (k === 0) { fn([]); return; }
+  while (true) {
+    if (fn(idx.map((x) => pool[x])) === false) return;
+    let p = k - 1;
+    while (p >= 0 && idx[p] === n - k + p) p--;
+    if (p < 0) return;
+    idx[p]++;
+    for (let q = p + 1; q < k; q++) idx[q] = idx[q - 1] + 1;
+  }
+}
+
+/*
+ * info: { n, R, C, k, u, claims[], openEvil[], openMed[], stmts[], knownEvil[], knownGood[] }
+ * 戻り値: 矛盾しない虚偽者集合（配列）のリスト（limit まで）
+ */
+function solve(info, limit = 6) {
+  const g = geo(info.R, info.C);
+  const n = g.n;
+  const sols = [];
+  const mustE = new Set([...(info.openEvil || []), ...(info.knownEvil || [])]);
+  const notE = new Set([...(info.openMed || []), ...(info.knownGood || [])]);
+  const pool = range(n).filter((i) => !mustE.has(i) && !notE.has(i));
+  const need = info.k - mustE.size;
+  if (need < 0) return sols;
+  const E = new Uint8Array(n);
+  const U = new Uint8Array(n);
+  const stmts = info.stmts;
+  forCombos(pool, need, (combo) => {
+    E.fill(0);
+    for (const i of mustE) E[i] = 1;
+    for (const i of combo) E[i] = 1;
+    // 善側の身分は重複しない
+    const seen = new Set();
+    for (let i = 0; i < n; i++) {
+      if (E[i]) continue;
+      const c = info.claims[i];
+      if (c == null) continue;
+      if (seen.has(c)) return true;
+      seen.add(c);
+    }
+    const forced = new Set(info.openMed || []);
+    const deferred = [];
+    for (let i = 0; i < n; i++) {
+      const st = stmts[i];
+      if (!st) continue;
+      if (dependsOnU(st.pred)) { deferred.push(i); continue; }
+      const v = evalPred(st.pred, E, null, g, stmts);
+      if (E[i]) { if (v) return true; } else if (!v) forced.add(i);
+    }
+    if (forced.size > info.u) return true;
+    for (const i of forced) if (E[i]) return true;
+    const upool = range(n).filter((i) => !E[i] && !forced.has(i));
+    const uneed = info.u - forced.size;
+    if (upool.length < uneed) return true;
+    let ok = false;
+    if (!deferred.length) ok = true;
+    else {
+      forCombos(upool, uneed, (uc) => {
+        U.fill(0);
+        for (const i of forced) U[i] = 1;
+        for (const i of uc) U[i] = 1;
+        for (const i of deferred) {
+          if (U[i]) continue;
+          const v = evalPred(stmts[i].pred, E, U, g, stmts);
+          if (E[i] ? v : !v) return true;
+        }
+        ok = true;
+        return false;
+      });
+    }
+    if (ok) {
+      sols.push(range(n).filter((i) => E[i]));
+      if (sols.length >= limit) return false;
+    }
+    return true;
+  });
+  return sols;
+}
+
+function solverInfoFromTrial(t, opts = {}) {
+  return {
+    R: t.R, C: t.C, n: t.n, k: t.k, u: t.u,
+    claims: t.cards.map((c) => c.claim),
+    openEvil: t.cards.filter((c) => ROLE[c.claim].open && (ROLE[c.claim].align === 'minion' || ROLE[c.claim].align === 'boss')).map((c) => c.i),
+    openMed: t.cards.filter((c) => ROLE[c.claim].open && ROLE[c.claim].align === 'med').map((c) => c.i),
+    stmts: t.cards.map((c) => (opts.onlyFlipped && !c.flipped ? null : c.stmt)),
+    knownEvil: opts.knownEvil || [],
+    knownGood: opts.knownGood || [],
+  };
+}
+
+/* ===== 審判の生成 ===== */
+function truthOf(cards, n) {
+  const E = new Uint8Array(n), U = new Uint8Array(n);
+  for (const c of cards) {
+    if (c.align === 'evil') E[c.i] = 1;
+    if (c.align === 'med' || c.afflict) U[c.i] = 1;
+  }
+  return { E, U };
+}
+
+const policyOf = (c) => {
+  if (c.align === 'evil') return 'F';
+  if (c.afflict === 'charm') return 'F';
+  if (c.afflict === 'poison') return 'R';
+  if (c.align === 'med') return ROLE[c.role].policy || 'R';
+  return 'T';
+};
+
+function buildWorld(spec, pools, rng) {
+  const { R, C } = spec;
+  const g = geo(R, C);
+  const n = g.n;
+  const k = spec.k;
+  const slots = rng.shuffle(range(n));
+  const cards = range(n).map((i) => ({ i, role: null, claim: null, align: 'good', afflict: null }));
+
+  // 虚偽者
+  const evilIdx = slots.slice(0, k);
+  const evilRoles = [];
+  if (spec.boss) evilRoles.push(spec.boss);
+  let openUsed = false;
+  while (evilRoles.length < k) {
+    let r = rng.pick(pools.minion);
+    if (ROLE[r].open) {
+      if (openUsed || rng.chance(0.45)) r = 'perjurer';
+      else openUsed = true;
+    }
+    if (r === 'mimic' && evilRoles.includes('mimic')) r = 'perjurer';
+    evilRoles.push(r);
+  }
+  evilIdx.forEach((ci, x) => { cards[ci].role = evilRoles[x]; cards[ci].align = 'evil'; });
+
+  // 惑い者
+  const medIdx = slots.slice(k, k + spec.m);
+  let openMed = false;
+  for (const ci of medIdx) {
+    let r = rng.pick(pools.med);
+    if (ROLE[r].open) { if (openMed) r = 'drunk'; else openMed = true; }
+    cards[ci].role = r; cards[ci].align = 'med';
+  }
+
+  // 無辜
+  const goodIdx = slots.slice(k + spec.m);
+  const uTotalGuess = spec.m + spec.afflictCount;
+  let goodPool = pools.good.filter((r) => uTotalGuess > 0 || (r !== 'doctor' && r !== 'herbal'));
+  if (k < 2) goodPool = goodPool.filter((r) => r !== 'bard');
+  const goodRoles = rng.sample(goodPool, goodIdx.length);
+  if (goodRoles.length < goodIdx.length) return null;
+  goodIdx.forEach((ci, x) => { cards[ci].role = goodRoles[x]; });
+
+  // 毒・魅了
+  const goods = () => cards.filter((c) => c.align === 'good' && !c.afflict);
+  for (const c of cards.filter((x) => x.align === 'evil')) {
+    if (c.role === 'poisoner' || c.role === 'wolfking') {
+      const t = rng.pick(g.adj8[c.i].map((j) => cards[j]).filter((x) => x.align === 'good' && !x.afflict));
+      if (!t) return null;
+      t.afflict = c.role === 'poisoner' ? 'poison' : 'charm';
+    } else if (c.role === 'bishop') {
+      for (let z = 0; z < 2; z++) { const t = rng.pick(goods()); if (!t) return null; t.afflict = 'poison'; }
+    } else if (c.role === 'lord') {
+      const a = rng.pick(goods()); if (!a) return null; a.afflict = 'poison';
+      const b = rng.pick(goods()); if (!b) return null; b.afflict = 'charm';
+    }
+  }
+
+  // 名乗る身分
+  const goodClaims = new Set(cards.filter((c) => c.align === 'good').map((c) => c.role));
+  const unusedGood = pools.good.filter((r) => !goodClaims.has(r) && (uTotalGuess > 0 || (r !== 'doctor' && r !== 'herbal')));
+  const takenFake = new Set();
+  for (const c of cards) {
+    const ro = ROLE[c.role];
+    if (c.align === 'good' || ro.open) { c.claim = c.role; continue; }
+    if (c.role === 'mimic') { c.claim = rng.pick([...goodClaims]); continue; }
+    let pool2 = unusedGood.filter((r) => !takenFake.has(r));
+    if (!pool2.length) pool2 = unusedGood;
+    if (!pool2.length) return null;
+    c.claim = rng.pick(pool2);
+    takenFake.add(c.claim);
+  }
+
+  const truth = truthOf(cards, n);
+  const u = cntIn(truth.U, range(n));
+  const ctx = { g, E: truth.E, U: truth.U, k, u, stmts: new Array(n).fill(null) };
+
+  // 証言（鐘撞き・墓守は尋問時に生成。鏡職人は最後）
+  const order = rng.shuffle(range(n)).sort((a, b) => (cards[a].claim === 'mirror') - (cards[b].claim === 'mirror'));
+  for (const i of order) {
+    const c = cards[i];
+    c.policy = policyOf(c);
+    c.want = c.policy === 'T' ? true : c.policy === 'F' ? false : rng.chance(0.5);
+    if (ROLE[c.claim].lazy) { c.stmt = null; continue; }
+    let st = GEN[c.claim](ctx, i, c.want, rng);
+    if (!st && c.policy === 'R') { c.want = !c.want; st = GEN[c.claim](ctx, i, c.want, rng); }
+    if (!st && c.claim !== c.role && c.role !== 'mimic') {
+      // 騙る身分を変えて再挑戦
+      for (let tries = 0; tries < 6 && !st; tries++) {
+        const alt = rng.pick(unusedGood.filter((r) => !ROLE[r].lazy && r !== 'mirror' && !takenFake.has(r)));
+        if (!alt) break;
+        st = GEN[alt](ctx, i, c.want, rng);
+        if (st) { c.claim = alt; takenFake.add(alt); }
+      }
+    }
+    if (!st) return null;
+    c.stmt = st;
+    ctx.stmts[i] = st;
+  }
+  return { cards, u, truth };
+}
+
+/*
+ * spec: { R, C, k, m, boss, afflictCount, maxAmb, chapter }
+ * pools: { good:[], med:[], minion:[] }
+ */
+function generateTrial(spec, pools, seed) {
+  const rng = new RNG(seed);
+  let best = null;
+  for (let attempt = 0; attempt < 90; attempt++) {
+    const w = buildWorld(spec, pools, rng);
+    if (!w) continue;
+    const t = { R: spec.R, C: spec.C, n: spec.R * spec.C, k: spec.k, u: w.u, cards: w.cards };
+    const sols = solve(solverInfoFromTrial(t), 8);
+    const amb = sols.length;
+    if (amb === 0) continue; // 生成の不具合（安全策）
+    const score = amb;
+    if (!best || score < best.score) best = { score, w, amb };
+    if (amb <= spec.maxAmb) break;
+  }
+  return best;
+}
+
+/* 尋問時に遅延証言（鐘撞き・墓守）を生成 */
+function lazyStatement(trial, i, rng) {
+  const g = geo(trial.R, trial.C);
+  const truth = truthOf(trial.cards, trial.n);
+  const prefix = trial.order.filter((x) => x !== i);
+  const ctx = {
+    g, E: truth.E, U: truth.U, k: trial.k, u: trial.u,
+    stmts: trial.cards.map((c) => c.stmt), prefix: prefix.slice(),
+    prev: prefix.length ? prefix[prefix.length - 1] : null,
+  };
+  const c = trial.cards[i];
+  let st = GEN[c.claim](ctx, i, c.want, rng);
+  if (!st) st = GEN[c.claim](ctx, i, !c.want, rng);
+  return st;
+}
+
+function statementTruth(trial, i) {
+  const c = trial.cards[i];
+  if (!c.stmt) return null;
+  const truth = truthOf(trial.cards, trial.n);
+  return evalPred(c.stmt.pred, truth.E, truth.U, geo(trial.R, trial.C), trial.cards.map((x) => x.stmt));
+}
+
+/* ---- audio.js ---- */
+/* ===== 音：Web Audio による生成BGMと効果音 ===== */
+
+const Audio2 = (() => {
+  let ctx = null, master, bgmGain, sfxGain, reverb;
+  let bgmOn = true, sfxOn = true;
+  let mood = 'title';
+  let timer = null;
+  let nextChordAt = 0, chordIdx = 0, nextBellAt = 0, nextPulseAt = 0;
+  let droneNodes = [];
+  let lastTick = 0;
+
+  const MOODS = {
+    title: { root: 38, prog: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]], chordLen: 7.5, bell: 13, pulse: 0, vol: 0.5 },
+    trial: { root: 38, prog: [[0, 3, 7], [1, 5, 8], [-2, 1, 5], [-5, -1, 2]], chordLen: 6.5, bell: 17, pulse: 2.2, vol: 0.42 },
+    boss: { root: 36, prog: [[0, 3, 6], [1, 4, 8], [0, 3, 7], [-1, 2, 6]], chordLen: 4.5, bell: 9, pulse: 1.1, vol: 0.5 },
+    calm: { root: 41, prog: [[0, 4, 7], [-3, 0, 4], [-5, -1, 2], [-7, -3, 0]], chordLen: 8, bell: 20, pulse: 0, vol: 0.38 },
+  };
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  function makeImpulse(seconds, decay) {
+    const rate = ctx.sampleRate, len = Math.floor(rate * seconds);
+    const buf = ctx.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return buf;
+  }
+  let noiseBuf = null;
+  function noise() {
+    if (!noiseBuf) {
+      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const s = ctx.createBufferSource();
+    s.buffer = noiseBuf;
+    return s;
+  }
+
+  function init() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+    reverb = ctx.createConvolver(); reverb.buffer = makeImpulse(3.2, 2.6);
+    const wet = ctx.createGain(); wet.gain.value = 0.55; reverb.connect(wet); wet.connect(master);
+    bgmGain = ctx.createGain(); bgmGain.gain.value = bgmOn ? MOODS[mood].vol : 0;
+    bgmGain.connect(master); bgmGain.connect(reverb);
+    sfxGain = ctx.createGain(); sfxGain.gain.value = sfxOn ? 0.9 : 0;
+    sfxGain.connect(master);
+    const sfxSend = ctx.createGain(); sfxSend.gain.value = 0.25; sfxGain.connect(sfxSend); sfxSend.connect(reverb);
+    startDrone();
+    nextChordAt = ctx.currentTime + 0.2;
+    nextBellAt = ctx.currentTime + 2;
+    nextPulseAt = ctx.currentTime + 1;
+    timer = setInterval(schedule, 200);
+  }
+
+  function startDrone() {
+    droneNodes.forEach((n) => { try { n.stop(); } catch (e) { /* */ } });
+    droneNodes = [];
+    const m = MOODS[mood];
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220; lp.Q.value = 0.7;
+    const g = ctx.createGain(); g.gain.value = 0.0001;
+    g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 4);
+    lp.connect(g); g.connect(bgmGain);
+    [0, 0.07, 12.02].forEach((det, i) => {
+      const o = ctx.createOscillator();
+      o.type = i === 2 ? 'triangle' : 'sawtooth';
+      o.frequency.value = mtof(m.root - 12 + det);
+      o.connect(lp); o.start();
+      droneNodes.push(o);
+    });
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
+    const lfoG = ctx.createGain(); lfoG.gain.value = 90;
+    lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
+    droneNodes.push(lfo);
+    // 風
+    const nz = noise(); nz.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 500; bp.Q.value = 0.6;
+    const ng = ctx.createGain(); ng.gain.value = 0.018;
+    const lfo2 = ctx.createOscillator(); lfo2.frequency.value = 0.05;
+    const lfo2g = ctx.createGain(); lfo2g.gain.value = 300;
+    lfo2.connect(lfo2g); lfo2g.connect(bp.frequency); lfo2.start();
+    nz.connect(bp); bp.connect(ng); ng.connect(bgmGain); nz.start();
+    droneNodes.push(nz, lfo2);
+  }
+
+  function organChord(t, notes, len) {
+    notes.forEach((n, idx) => {
+      const f = mtof(MOODS[mood].root + 12 + n);
+      [1, 2, 3].forEach((h, hi) => {
+        const o = ctx.createOscillator();
+        o.type = hi === 0 ? 'triangle' : 'sine';
+        o.frequency.value = f * h * (1 + (idx - 1) * 0.0008);
+        const g = ctx.createGain();
+        const peak = [0.05, 0.022, 0.01][hi];
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(peak, t + 1.6);
+        g.gain.setValueAtTime(peak, t + len - 1.6);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.8);
+        o.connect(g); g.connect(bgmGain);
+        o.start(t); o.stop(t + len + 1);
+      });
+    });
+  }
+
+  function bell(t, midi, vol, dest) {
+    const f = mtof(midi);
+    [[1, 1], [2.0, 0.5], [2.76, 0.35], [5.4, 0.18], [0.5, 0.4]].forEach(([r, a]) => {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f * r;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol * a, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 4.5 / Math.sqrt(r));
+      o.connect(g); g.connect(dest || bgmGain);
+      o.start(t); o.stop(t + 5);
+    });
+  }
+
+  function pulse(t) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.35);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + 0.6);
+  }
+
+  function schedule() {
+    if (!ctx) return;
+    const now = ctx.currentTime, m = MOODS[mood];
+    while (nextChordAt < now + 0.6) {
+      organChord(nextChordAt, m.prog[chordIdx % m.prog.length], m.chordLen);
+      chordIdx++;
+      nextChordAt += m.chordLen;
+    }
+    if (nextBellAt < now + 0.6) {
+      bell(nextBellAt, m.root + 24 + [0, 7, 12, 3][Math.floor(Math.random() * 4)], 0.05);
+      nextBellAt += m.bell * (0.7 + Math.random() * 0.6);
+    }
+    if (m.pulse && nextPulseAt < now + 0.6) {
+      pulse(nextPulseAt);
+      pulse(nextPulseAt + 0.28);
+      nextPulseAt += m.pulse;
+    } else if (!m.pulse) nextPulseAt = now + 1;
+  }
+
+  function setMood(mo) {
+    if (mo === mood || !MOODS[mo]) { mood = mo in MOODS ? mo : mood; return; }
+    mood = mo;
+    if (!ctx) return;
+    bgmGain.gain.setTargetAtTime(bgmOn ? MOODS[mood].vol : 0, ctx.currentTime, 0.8);
+    startDrone();
+    nextChordAt = ctx.currentTime + 0.5;
+  }
+
+  function env(g, t, a, peak, d) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  }
+
+  const sfx = {
+    flip() {
+      const t = ctx.currentTime;
+      const n = noise(); const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+      bp.frequency.setValueAtTime(900, t); bp.frequency.exponentialRampToValueAtTime(3200, t + 0.12);
+      const g = ctx.createGain(); env(g, t, 0.01, 0.35, 0.16);
+      n.connect(bp); bp.connect(g); g.connect(sfxGain); n.start(t); n.stop(t + 0.3);
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(180, t + 0.12); o.frequency.exponentialRampToValueAtTime(80, t + 0.25);
+      const g2 = ctx.createGain(); env(g2, t + 0.12, 0.005, 0.3, 0.18);
+      o.connect(g2); g2.connect(sfxGain); o.start(t + 0.1); o.stop(t + 0.4);
+    },
+    tick() {
+      const t = ctx.currentTime;
+      if (t - lastTick < 0.045) return;
+      lastTick = t;
+      const o = ctx.createOscillator(); o.type = 'square';
+      o.frequency.value = 1800 + Math.random() * 500;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1500;
+      const g = ctx.createGain(); env(g, t, 0.001, 0.025, 0.025);
+      o.connect(hp); hp.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.05);
+    },
+    select() {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 660;
+      const g = ctx.createGain(); env(g, t, 0.005, 0.08, 0.12);
+      o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.2);
+    },
+    mark() {
+      const t = ctx.currentTime;
+      const n = noise(); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      const g = ctx.createGain(); env(g, t, 0.003, 0.25, 0.08);
+      n.connect(lp); lp.connect(g); g.connect(sfxGain); n.start(t); n.stop(t + 0.15);
+    },
+    execute() {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.9);
+      const g = ctx.createGain(); env(g, t, 0.01, 0.8, 1.0);
+      o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 1.2);
+      const n = noise(); const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(3000, t); lp.frequency.exponentialRampToValueAtTime(200, t + 0.6);
+      const g2 = ctx.createGain(); env(g2, t, 0.005, 0.5, 0.7);
+      n.connect(lp); lp.connect(g2); g2.connect(sfxGain); n.start(t); n.stop(t + 0.9);
+      bell(t + 0.02, 33, 0.12, sfxGain);
+    },
+    good() {
+      const t = ctx.currentTime;
+      [62, 69, 74, 78].forEach((m, i) => bell(t + i * 0.09, m, 0.07, sfxGain));
+    },
+    bad() {
+      const t = ctx.currentTime;
+      [44, 45, 50].forEach((m) => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m);
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
+        const g = ctx.createGain(); env(g, t, 0.02, 0.12, 1.3);
+        o.connect(lp); lp.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 1.5);
+      });
+    },
+    coin() {
+      const t = ctx.currentTime;
+      [88, 95].forEach((m, i) => {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = mtof(m);
+        const g = ctx.createGain(); env(g, t + i * 0.07, 0.002, 0.08, 0.3);
+        o.connect(g); g.connect(sfxGain); o.start(t + i * 0.07); o.stop(t + 0.5);
+      });
+    },
+    item() {
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(400, t); o.frequency.exponentialRampToValueAtTime(1200, t + 0.4);
+      const g = ctx.createGain(); env(g, t, 0.05, 0.1, 0.5);
+      o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + 0.7);
+      bell(t + 0.3, 81, 0.04, sfxGain);
+    },
+    victory() {
+      const t = ctx.currentTime;
+      [50, 57, 62, 66, 69, 74].forEach((m, i) => bell(t + i * 0.16, m, 0.07, sfxGain));
+    },
+    gameover() {
+      const t = ctx.currentTime;
+      [38, 37, 33].forEach((m, i) => bell(t + i * 0.7, m, 0.12, sfxGain));
+    },
+  };
+
+  function play(name) {
+    if (!ctx || !sfxOn || !sfx[name]) return;
+    try { sfx[name](); } catch (e) { /* 再生に失敗しても続行 */ }
+  }
+
+  return {
+    init, play, setMood,
+    setBgm(on) { bgmOn = on; if (ctx) bgmGain.gain.setTargetAtTime(on ? MOODS[mood].vol : 0, ctx.currentTime, 0.3); },
+    setSfx(on) { sfxOn = on; if (ctx) sfxGain.gain.setTargetAtTime(on ? 0.9 : 0, ctx.currentTime, 0.05); },
+  };
+})();
+
+/* ---- portrait.js ---- */
+/* ===== 肖像：手続き生成のシルエット肖像（SVG） ===== */
+
+const Portrait = (() => {
+  const ACCENTS = ['#7a2433', '#3f5a4a', '#3d4a66', '#8a6a2e', '#5b3a5e', '#6b3b2a', '#4a4f57', '#2f4f5a'];
+  const BGS = ['#3a2a22', '#2a2a36', '#33262c', '#26302c', '#382e22', '#2c2433'];
+  const cache = {};
+
+  function make(seed) {
+    if (cache[seed]) return cache[seed];
+    const r = new RNG('portrait' + seed);
+    const id = 'p' + (hashStr(String(seed)) % 1e8);
+    const acc = r.pick(ACCENTS);
+    const bg = r.pick(BGS);
+    const hrx = 13 + r.int(4), hry = 17 + r.int(4);
+    const hy = 60 + r.int(4);
+    const hair = r.pick(['short', 'long', 'bun', 'bald', 'curly', 'none']);
+    const hat = r.pick(['none', 'none', 'hood', 'tophat', 'brim', 'tricorn', 'veil', 'cap', 'bonnet', 'mitre', 'none']);
+    const beard = r.chance(0.28) ? r.pick(['full', 'goatee', 'mustache']) : null;
+    const glasses = r.chance(0.12);
+    const shoulderW = 34 + r.int(8);
+    const eyeY = hy + 1;
+    const eyeDx = 5 + r.int(2);
+    const top = hy - hry;
+
+    const parts = [];
+    const figure = `fill="url(#${id}f)" stroke="url(#${id}r)" stroke-width="1.4"`;
+    // 背景
+    parts.push(`<rect width="100" height="130" fill="url(#${id}b)"/>`);
+    // 長髪（体の後ろ）
+    if (hair === 'long' && hat !== 'hood' && hat !== 'veil') {
+      parts.push(`<path d="M${50 - hrx - 3},${hy - 4} C${50 - hrx - 6},${hy + 30} ${50 - hrx - 4},${hy + 40} ${50 - hrx + 2},${hy + 44} L${50 + hrx - 2},${hy + 44} C${50 + hrx + 4},${hy + 40} ${50 + hrx + 6},${hy + 30} ${50 + hrx + 3},${hy - 4} Z" ${figure}/>`);
+    }
+    if (hat === 'hood' || hat === 'veil') {
+      const w = hrx + 9;
+      parts.push(`<path d="M${50 - w},${hy + 34} C${50 - w - 2},${top - 2} ${50 - 8},${top - 10} 50,${top - 10} C${50 + 8},${top - 10} ${50 + w + 2},${top - 2} ${50 + w},${hy + 34} Z" ${figure}/>`);
+    }
+    // 肩
+    parts.push(`<path d="M${50 - shoulderW - 10},130 C${50 - shoulderW - 8},${hy + 40} ${50 - 16},${hy + 30} 50,${hy + 30} C${50 + 16},${hy + 30} ${50 + shoulderW + 8},${hy + 40} ${50 + shoulderW + 10},130 Z" ${figure}/>`);
+    // 襟
+    parts.push(`<path d="M${50 - 13},${hy + 31} L50,${hy + 50} L${50 + 13},${hy + 31} L${50 + 8},${hy + 29} L50,${hy + 40} L${50 - 8},${hy + 29} Z" fill="${acc}" opacity="0.85"/>`);
+    // 首
+    parts.push(`<rect x="44" y="${hy + 12}" width="12" height="${20}" rx="4" fill="url(#${id}f)"/>`);
+    // 頭
+    parts.push(`<ellipse cx="50" cy="${hy}" rx="${hrx}" ry="${hry}" ${figure}/>`);
+    // 髪
+    if (hat === 'none' || hat === 'brim' || hat === 'tophat' || hat === 'tricorn' || hat === 'cap') {
+      if (hair === 'short') parts.push(`<path d="M${50 - hrx - 1},${hy - 2} C${50 - hrx},${top - 4} ${50 + hrx},${top - 4} ${50 + hrx + 1},${hy - 2} C${50 + hrx - 4},${top + 6} ${50 - hrx + 4},${top + 6} ${50 - hrx - 1},${hy - 2} Z" ${figure}/>`);
+      if (hair === 'bun') parts.push(`<circle cx="50" cy="${top - 3}" r="7" ${figure}/>`);
+      if (hair === 'curly') for (let x = -2; x <= 2; x++) parts.push(`<circle cx="${50 + x * (hrx / 2.4)}" cy="${top + 2 + Math.abs(x) * 3}" r="5.5" ${figure}/>`);
+    }
+    // 帽子
+    if (hat === 'tophat') parts.push(`<path d="M${50 - hrx - 7},${top + 6} L${50 + hrx + 7},${top + 6} L${50 + hrx + 7},${top + 9} L${50 - hrx - 7},${top + 9} Z M${50 - hrx + 2},${top + 6} L${50 - hrx + 3},${top - 22} L${50 + hrx - 3},${top - 22} L${50 + hrx - 2},${top + 6} Z" ${figure}/><rect x="${50 - hrx + 2.5}" y="${top + 1}" width="${2 * hrx - 5}" height="3" fill="${acc}"/>`);
+    if (hat === 'brim') parts.push(`<ellipse cx="50" cy="${top + 7}" rx="${hrx + 14}" ry="4.5" ${figure}/><path d="M${50 - hrx + 1},${top + 6} C${50 - hrx + 2},${top - 12} ${50 + hrx - 2},${top - 12} ${50 + hrx - 1},${top + 6} Z" ${figure}/>`);
+    if (hat === 'tricorn') parts.push(`<path d="M${50 - hrx - 10},${top + 8} Q50,${top - 18} ${50 + hrx + 10},${top + 8} Q50,${top + 2} ${50 - hrx - 10},${top + 8} Z" ${figure}/>`);
+    if (hat === 'cap') parts.push(`<path d="M${50 - hrx - 1},${top + 9} C${50 - hrx},${top - 6} ${50 + hrx},${top - 6} ${50 + hrx + 1},${top + 9} Z" ${figure}/><path d="M${50 + hrx - 4},${top + 8} L${50 + hrx + 9},${top + 10} L${50 + hrx - 2},${top + 11} Z" ${figure}/>`);
+    if (hat === 'bonnet') parts.push(`<path d="M${50 - hrx - 4},${hy + 6} C${50 - hrx - 6},${top - 8} ${50 + hrx + 6},${top - 8} ${50 + hrx + 4},${hy + 6} C${50 + hrx},${top + 4} ${50 - hrx},${top + 4} ${50 - hrx - 4},${hy + 6} Z" ${figure}/>`);
+    if (hat === 'mitre') parts.push(`<path d="M${50 - hrx + 1},${top + 7} L${50 - hrx + 3},${top - 14} L50,${top - 24} L${50 + hrx - 3},${top - 14} L${50 + hrx - 1},${top + 7} Z" ${figure}/><path d="M50,${top - 22} L50,${top + 6} M${50 - 5},${top - 6} L${50 + 5},${top - 6}" stroke="${acc}" stroke-width="2"/>`);
+    if (hat === 'veil') parts.push(`<path d="M${50 - hrx - 2},${top + 6} C${50 - hrx},${top} ${50 + hrx},${top} ${50 + hrx + 2},${top + 6}" stroke="${acc}" stroke-width="3" fill="none"/>`);
+    // 髭
+    if (beard === 'full') parts.push(`<path d="M${50 - hrx + 2},${hy + 4} C${50 - hrx + 3},${hy + hry + 8} ${50 + hrx - 3},${hy + hry + 8} ${50 + hrx - 2},${hy + 4} C${50 + 6},${hy + 12} ${50 - 6},${hy + 12} ${50 - hrx + 2},${hy + 4} Z" ${figure}/>`);
+    if (beard === 'goatee') parts.push(`<path d="M46,${hy + hry - 5} L50,${hy + hry + 7} L54,${hy + hry - 5} Z" ${figure}/>`);
+    if (beard === 'mustache') parts.push(`<path d="M42,${hy + 9} Q50,${hy + 5} 58,${hy + 9} Q50,${hy + 8} 42,${hy + 9} Z" fill="#0b0809"/>`);
+    // 目（灯りを映す点）
+    const glow = `fill="#e9c98a" opacity="${0.55 + r.next() * 0.3}"`;
+    parts.push(`<ellipse cx="${50 - eyeDx}" cy="${eyeY}" rx="1.7" ry="1.1" ${glow}/><ellipse cx="${50 + eyeDx}" cy="${eyeY}" rx="1.7" ry="1.1" ${glow}/>`);
+    if (glasses) parts.push(`<circle cx="${50 - eyeDx}" cy="${eyeY}" r="3.4" fill="none" stroke="#c8a25a" stroke-width="0.8" opacity="0.7"/><circle cx="${50 + eyeDx}" cy="${eyeY}" r="3.4" fill="none" stroke="#c8a25a" stroke-width="0.8" opacity="0.7"/>`);
+
+    const lightX = r.chance(0.5) ? 0 : 1;
+    const svg = `<svg class="portrait-svg" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs>
+<radialGradient id="${id}b" cx="${lightX ? 70 : 30}%" cy="30%" r="85%"><stop offset="0" stop-color="${bg}"/><stop offset="1" stop-color="#0c090b"/></radialGradient>
+<linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#231b20"/><stop offset="1" stop-color="#0e0b0d"/></linearGradient>
+<linearGradient id="${id}r" x1="${lightX}" y1="0" x2="${1 - lightX}" y2="0.4"><stop offset="0" stop-color="#d9b46a" stop-opacity="0.75"/><stop offset="0.45" stop-color="#d9b46a" stop-opacity="0"/></linearGradient>
+</defs>${parts.join('')}</svg>`;
+    cache[seed] = svg;
+    return svg;
+  }
+  return { make };
+})();
+
+/* ---- game.js ---- */
+/* ===== ゲーム進行：ラン・審判・報酬・保存 ===== */
+
+const RUN_KEY = 'itsuwari-no-tei/run/v1';
+const META_KEY = 'itsuwari-no-tei/meta/v1';
+
+const Game = (() => {
+  let meta = null;
+  let run = null;
+  const listeners = [];
+
+  function defaultMeta() {
+    return {
+      trialsCleared: 0, runs: 0, wins: 0, maxRank: 0, bestChapter: -1,
+      evilCaught: 0, misExec: 0, tutorialDone: false,
+      flags: {}, newUnlocks: [],
+      settings: { bgm: true, sfx: true, speed: 1 },
+    };
+  }
+  function loadMeta() {
+    meta = Object.assign(defaultMeta(), store.get(META_KEY, {}));
+    meta.settings = Object.assign(defaultMeta().settings, meta.settings || {});
+    meta.flags = meta.flags || {};
+    return meta;
+  }
+  const saveMeta = () => store.set(META_KEY, meta);
+  const saveRun = () => { if (run && run.tutorial) return; if (run) store.set(RUN_KEY, run); else store.del(RUN_KEY); };
+  function loadRun() {
+    const r = store.get(RUN_KEY, null);
+    run = r && r.v === 1 ? r : null;
+    return run;
+  }
+  const emit = (ev, data) => listeners.forEach((f) => f(ev, data));
+
+  /* ----- 解禁 ----- */
+  const roleUnlocked = (r) => (r.unlock || 0) <= meta.trialsCleared;
+  function relicUnlocked(rl) {
+    const u = rl.unlock;
+    if (u === 'base') return true;
+    if (u[0] === 't') return meta.trialsCleared >= +u.slice(1);
+    return !!meta.flags[u];
+  }
+  function pools() {
+    const un = ROLES.filter(roleUnlocked);
+    return {
+      good: un.filter((r) => r.align === 'good').map((r) => r.id),
+      med: un.filter((r) => r.align === 'med').map((r) => r.id),
+      minion: un.filter((r) => r.align === 'minion').map((r) => r.id),
+    };
+  }
+  function checkUnlocks(before) {
+    const now = [];
+    ROLES.forEach((r) => { if (r.unlock && r.unlock > before.t && r.unlock <= meta.trialsCleared) now.push({ kind: 'role', id: r.id }); });
+    RELICS.forEach((rl) => { if (!before.relics.has(rl.id) && relicUnlocked(rl)) now.push({ kind: 'relic', id: rl.id }); });
+    return now;
+  }
+  const unlockSnapshot = () => ({ t: meta.trialsCleared, relics: new Set(RELICS.filter(relicUnlocked).map((r) => r.id)) });
+
+  /* ----- ラン ----- */
+  function newRun(rank) {
+    const seed = Math.floor(Math.random() * 1e9);
+    const maxCred = BASE_CRED - (rank >= 1 ? 1 : 0);
+    run = {
+      v: 1, seed, rank, chapter: 0, trialIdx: 0,
+      cred: maxCred, maxCred, silver: 10,
+      relics: [], items: ['holywater'], slots: 3,
+      phase: 'trial', trial: null, reward: null, shop: null, step: 0,
+      stats: { trials: 0, evil: 0, mis: 0, flips: 0 },
+      log: [],
+    };
+    meta.runs++;
+    saveMeta();
+    startTrial();
+    return run;
+  }
+  const has = (id) => run && run.relics.includes(id);
+  const rng = (tag) => new RNG(run.seed + ':' + tag + ':' + run.step);
+
+  function trialSpec() {
+    const ch = CHAPTERS[run.chapter];
+    const base = ch.trials[run.trialIdx];
+    const r = rng('spec');
+    let boss = null;
+    if (base.boss) {
+      if (ch.boss === 'any') {
+        const cands = ['wolfking', 'bishop', 'masked'].filter((b) => roleUnlocked(ROLE[b]));
+        boss = r.pick(cands);
+      } else if (ch.boss === 'masked' && !roleUnlocked(ROLE.masked)) boss = 'wolfking';
+      else boss = ch.boss;
+    }
+    let k = base.k, m = base.m;
+    const n = base.R * base.C;
+    if (run.rank >= 2 && run.chapter >= 1) m += 1;
+    if (run.rank >= 4 && run.chapter >= 2) k = Math.min(k + 1, Math.floor(n / 3) + 1);
+    const afflictCount = { wolfking: 1, bishop: 2, lord: 2 }[boss] || 0;
+    let maxAmb = 1;
+    if (run.chapter >= 1) maxAmb = r.chance(0.3) ? 2 : 1;
+    if (ch.final) maxAmb = r.chance(0.5) ? 2 : 1;
+    return { R: base.R, C: base.C, k, m, boss, afflictCount, maxAmb, chapter: run.chapter };
+  }
+
+  function startTrial() {
+    const spec = trialSpec();
+    const res = generateTrial(spec, pools(), run.seed + ':trial:' + run.step);
+    const r = rng('names');
+    const names = r.sample(NAMES, spec.R * spec.C);
+    const cards = res.w.cards.map((c, x) => ({
+      i: c.i, name: names[x], face: run.seed + '-' + run.step + '-' + x,
+      role: c.role, claim: c.claim, align: c.align, afflict: c.afflict,
+      policy: c.policy, want: c.want, stmt: c.stmt,
+      flipped: false, executed: false, mark: '',
+      seal: null, holy: null, truthShown: false, identity: null, afflictShown: false, crow: null,
+      tenbin: false,
+    }));
+    const t = {
+      R: spec.R, C: spec.C, n: spec.R * spec.C, k: spec.k, u: res.w.u, m: spec.m,
+      boss: spec.boss, chapter: run.chapter, idx: run.trialIdx, amb: res.amb,
+      cards, order: [], evilDown: 0, mis: 0, done: false, failed: false,
+      pardon: false, hotenUsed: false, bossRow: null, events: [],
+    };
+    run.trial = t;
+    run.phase = 'trial';
+    const r2 = rng('relicstart');
+    if (has('tenbin')) r2.pick(cards).tenbin = true;
+    if (has('gantai')) { const c = r2.pick(cards.filter((x) => x.align === 'good' && !x.afflict)); if (c) c.seal = 'white'; }
+    if (has('shokan')) { const c = r2.pick(cards.filter((x) => x.align === 'med' || x.afflict)); if (c) c.seal = 'unr'; }
+    if (has('kiba') && spec.boss) { const b = cards.find((x) => x.role === spec.boss); t.bossRow = Math.floor(b.i / spec.C); }
+    if (has('seihai') && r2.chance(0.33)) addItem('holywater');
+    saveRun();
+  }
+
+  /* ----- 審判中の行動 ----- */
+  function flip(i) {
+    const t = run.trial;
+    const c = t.cards[i];
+    if (c.flipped || t.done) return null;
+    c.flipped = true;
+    t.order.push(i);
+    run.stats.flips++;
+    if (!c.stmt) c.stmt = lazyStatement(t, i, rng('lazy' + i + ':' + t.order.length));
+    if (c.tenbin) c.truthShown = true;
+    if (has('kanenoshita') && t.order.length === 1) c.truthShown = true;
+    if (has('hakkotsu') && c.afflict) c.afflictShown = true;
+    saveRun();
+    return c;
+  }
+
+  function setMark(i, m) {
+    const c = run.trial.cards[i];
+    c.mark = c.mark === m ? '' : m;
+    saveRun();
+  }
+
+  function agitatorAlive(t) {
+    return t.cards.some((c) => c.role === 'agitator' && !c.executed);
+  }
+
+  function execute(i) {
+    const t = run.trial;
+    const c = t.cards[i];
+    if (c.executed || t.done) return null;
+    c.executed = true;
+    const out = { card: c, evil: c.align === 'evil', penalty: 0, saved: null, silver: 0 };
+    if (has('karasu')) {
+      const g = geo(t.R, t.C);
+      out.crow = g.adj8[i].filter((j) => t.cards[j].align === 'evil').length;
+      c.crow = out.crow;
+    }
+    if (out.evil) {
+      t.evilDown++;
+      run.stats.evil++;
+      meta.evilCaught++;
+      if (has('yubiwa')) { run.silver += 4; out.silver += 4; }
+      if (t.evilDown >= t.k) winTrial(out);
+    } else {
+      let p = c.align === 'med' ? (ROLE[c.role].execCost || 1) : 2;
+      if (agitatorAlive(t)) p += 1;
+      if (run.rank >= 5) p += 1;
+      if (has('hoten') && !t.hotenUsed) { p = Math.max(0, p - 1); t.hotenUsed = true; }
+      if (t.pardon) { p = 0; t.pardon = false; out.saved = 'pardon'; }
+      else if (has('kuroneko') && rng('neko' + t.mis + ':' + i).chance(0.5)) { p = 0; out.saved = 'kuroneko'; }
+      out.penalty = p;
+      run.cred -= p;
+      t.mis++;
+      run.stats.mis++;
+      meta.misExec++;
+      if (run.cred <= 0) {
+        run.cred = 0;
+        t.failed = true;
+        loseRun();
+        out.gameover = true;
+      }
+    }
+    saveRun(); saveMeta();
+    return out;
+  }
+
+  function winTrial(out) {
+    const t = run.trial;
+    t.done = true;
+    const before = unlockSnapshot();
+    const gain = 12 + t.k * 3 + (t.mis === 0 ? 10 : 0);
+    run.silver += gain;
+    out.win = { silver: gain, perfect: t.mis === 0, healed: 0 };
+    if (t.mis === 0 && has('kitosho') && run.cred < run.maxCred) { run.cred++; out.win.healed = 1; }
+    run.stats.trials++;
+    meta.trialsCleared++;
+    const ch = CHAPTERS[run.chapter];
+    const lastOfChapter = run.trialIdx === ch.trials.length - 1;
+    if (lastOfChapter) {
+      if (run.chapter === 0) meta.flags.ch1 = true;
+      if (run.chapter === 1) meta.flags.ch2 = true;
+      if (run.chapter === 2) meta.flags.ch3 = true;
+      if (ch.final) meta.flags.win = true;
+      meta.bestChapter = Math.max(meta.bestChapter, run.chapter);
+    }
+    out.unlocks = checkUnlocks(before);
+    meta.newUnlocks = (meta.newUnlocks || []).concat(out.unlocks);
+    if (ch.final) {
+      meta.wins++;
+      meta.maxRank = Math.max(meta.maxRank, Math.min(RANKS.length - 1, run.rank + 1));
+      run.phase = 'victory';
+    } else {
+      run.phase = 'reward';
+      run.reward = makeReward(!!ch.trials[run.trialIdx].boss);
+    }
+  }
+
+  function loseRun() {
+    run.phase = 'gameover';
+    meta.bestChapter = Math.max(meta.bestChapter, run.chapter - 1);
+  }
+
+  /* ----- 道具 ----- */
+  function addItem(id) {
+    if (run.items.length >= slotCount()) return false;
+    run.items.push(id);
+    return true;
+  }
+  const slotCount = () => run.slots + (has('gaito') ? 1 : 0);
+
+  function useItem(slot, target) {
+    const t = run.trial;
+    const id = run.items[slot];
+    if (!id || t.done) return null;
+    const it = ITEM[id];
+    const res = { id };
+    if (it.target !== 'none') {
+      const c = t.cards[target];
+      if (!c) return null;
+      if (it.target === 'flipped' && !c.flipped) return { error: '尋問済みの者にしか使えない。' };
+      res.card = c;
+      if (id === 'holywater') {
+        const fakesGood = ['spy', 'masked', 'lord'].includes(c.role);
+        c.holy = c.align === 'evil' && !fakesGood ? 'evil' : 'good';
+        res.result = c.holy;
+      } else if (id === 'scales') {
+        c.truthShown = true;
+        res.result = statementTruth(t, c.i);
+      } else if (id === 'candle') {
+        c.identity = c.role === 'masked' ? c.claim : c.role;
+        if (c.afflict && c.role !== 'masked') c.afflictShown = true;
+        res.result = c.identity;
+      }
+    } else {
+      if (id === 'pardon') { if (t.pardon) return { error: '赦免状はすでに効いている。' }; t.pardon = true; }
+      if (id === 'wine') { if (run.cred >= run.maxCred) return { error: '信用はすでに満ちている。' }; run.cred = Math.min(run.maxCred, run.cred + 2); }
+      if (id === 'lily') {
+        const c = rng('lily' + t.order.length + ':' + run.items.length).pick(t.cards.filter((x) => x.align === 'good' && !x.afflict && x.seal !== 'white' && !x.executed));
+        if (!c) return { error: '示すべき無辜はもういない。' };
+        c.seal = 'white';
+        res.card = c;
+      }
+    }
+    run.items.splice(slot, 1);
+    saveRun();
+    return res;
+  }
+
+  /* ----- 報酬・行商・幕間 ----- */
+  function relicPool() {
+    return RELICS.filter((rl) => relicUnlocked(rl) && !run.relics.includes(rl.id)).map((r) => r.id);
+  }
+  function makeReward(boss) {
+    const r = rng('reward');
+    let count = 3 + (has('sakazuki') ? 1 : 0) - (run.rank >= 3 ? 1 : 0);
+    const opts = [];
+    if (boss) {
+      r.sample(relicPool(), count).forEach((id) => opts.push({ type: 'relic', id }));
+    } else {
+      const bag = [];
+      const rp = relicPool();
+      if (rp.length && r.chance(0.55)) bag.push({ type: 'relic', id: r.pick(rp) });
+      const its = r.sample(ITEMS.map((x) => x.id), 2);
+      its.forEach((id) => bag.push({ type: 'item', id }));
+      bag.push({ type: 'rest', amount: 2 });
+      bag.push({ type: 'silver', amount: 22 });
+      r.shuffle(bag).slice(0, count).forEach((o) => opts.push(o));
+    }
+    if (!opts.length) opts.push({ type: 'silver', amount: 30 });
+    return { options: opts, taken: false };
+  }
+
+  function takeReward(idx) {
+    const o = run.reward.options[idx];
+    if (!o || run.reward.taken) return null;
+    const res = applyGain(o);
+    if (res && res.error) return res;
+    run.reward.taken = true;
+    advance();
+    return res;
+  }
+  function skipReward() { run.reward.taken = true; advance(); }
+
+  function applyGain(o) {
+    if (o.type === 'relic') {
+      run.relics.push(o.id);
+      if (o.id === 'seiyaku') { run.maxCred += 2; run.cred += 2; }
+    } else if (o.type === 'item') {
+      if (!addItem(o.id)) return { error: '道具がいっぱいだ。' };
+    } else if (o.type === 'rest') {
+      run.cred = Math.min(run.maxCred, run.cred + o.amount);
+    } else if (o.type === 'silver') {
+      run.silver += o.amount;
+    }
+    saveRun();
+    return { ok: true };
+  }
+
+  function advance() {
+    const ch = CHAPTERS[run.chapter];
+    run.step++;
+    if (run.trialIdx < ch.trials.length - 1) {
+      run.trialIdx++;
+      startTrial();
+    } else {
+      run.phase = 'interlude';
+      run.shop = makeShop();
+    }
+    saveRun();
+  }
+
+  const price = (p) => Math.round(p * (has('kagi') ? 0.7 : 1));
+  function makeShop() {
+    const r = rng('shop');
+    const goods = r.sample(ITEMS.map((x) => x.id), 3).map((id) => ({ type: 'item', id, price: price(ITEM[id].price), sold: false }));
+    const rp = relicPool();
+    if (rp.length) goods.push({ type: 'relic', id: r.pick(rp), price: price(48), sold: false });
+    goods.push({ type: 'rest', amount: 2, price: price(20), sold: false });
+    return { goods, rested: false };
+  }
+  function buy(idx) {
+    const g = run.shop.goods[idx];
+    if (!g || g.sold) return null;
+    if (run.silver < g.price) return { error: '銀貨が足りない。' };
+    if (g.type === 'rest' && run.cred >= run.maxCred) return { error: '信用はすでに満ちている。' };
+    const res = applyGain(g);
+    if (res.error) return res;
+    run.silver -= g.price;
+    g.sold = true;
+    saveRun();
+    return { ok: true };
+  }
+  function rest() {
+    if (run.shop.rested) return null;
+    const amt = run.rank >= 5 ? 1 : 2;
+    run.cred = Math.min(run.maxCred, run.cred + amt);
+    run.shop.rested = true;
+    saveRun();
+    return { amount: amt };
+  }
+  function nextChapter() {
+    run.chapter++;
+    run.trialIdx = 0;
+    run.step++;
+    run.shop = null;
+    startTrial();
+    saveRun();
+  }
+
+  function abandon() { run = null; saveRun(); }
+
+  /* ----- 手ほどき（固定盤面） ----- */
+  function tutorialTrial() {
+    const def = [
+      { role: 'watch', align: 'good', stmt: { text: '私の上下左右に、虚偽者は0人いる。', pred: { t: 'cnt', s: [1, 3], v: 0 }, refs: [1, 3] } },
+      { role: 'seer', align: 'good', stmt: { text: '⟦5⟧は虚偽者ではない。', pred: { t: 'ev', j: 5, b: false }, refs: [5] } },
+      { role: 'perjurer', claim: 'accuser', align: 'evil', stmt: { text: '⟦0⟧は虚偽者だ！', pred: { t: 'ev', j: 0, b: true }, refs: [0] } },
+      { role: 'nun', align: 'good', stmt: { text: '⟦1⟧は善良な者だ。私が保証しよう。', pred: { t: 'ev', j: 1, b: false }, refs: [1] } },
+      { role: 'gate', align: 'good', stmt: { text: '私の上下左右に、虚偽者はいない。', pred: { t: 'any', s: [1, 3, 5], b: false }, refs: [1, 3, 5] } },
+      { role: 'locksmith', align: 'good', stmt: { text: '⟦0⟧・⟦2⟧・⟦4⟧の中に、虚偽者は1人いる。', pred: { t: 'cnt', s: [0, 2, 4], v: 1 }, refs: [0, 2, 4] } },
+    ];
+    const names = ['エルマ', 'ヨハン', 'ギーゼラ', 'マティアス', 'リーゼル', 'オスヴァルト'];
+    return {
+      R: 2, C: 3, n: 6, k: 1, u: 0, m: 0, boss: null, chapter: -1, idx: 0, amb: 1, tutorial: true,
+      cards: def.map((d, i) => ({
+        i, name: names[i], face: 'tut-' + i, role: d.role, claim: d.claim || d.role, align: d.align, afflict: null,
+        policy: d.align === 'evil' ? 'F' : 'T', want: d.align !== 'evil', stmt: d.stmt,
+        flipped: false, executed: false, mark: '', seal: null, holy: null, truthShown: false, identity: null,
+        afflictShown: false, crow: null, tenbin: false,
+      })),
+      order: [], evilDown: 0, mis: 0, done: false, failed: false, pardon: false, hotenUsed: false, bossRow: null, events: [],
+    };
+  }
+  function startTutorial() {
+    run = {
+      v: 1, seed: 1, rank: 0, chapter: 0, trialIdx: 0, cred: BASE_CRED, maxCred: BASE_CRED, silver: 0,
+      relics: [], items: [], slots: 3, phase: 'trial', trial: tutorialTrial(), reward: null, shop: null, step: 0,
+      stats: { trials: 0, evil: 0, mis: 0, flips: 0 }, log: [], tutorial: true,
+    };
+    return run;
+  }
+  // 手ほどき中の処刑（ラン外）
+  function tutorialExecute(i) {
+    const t = run.trial, c = t.cards[i];
+    if (c.executed || t.done) return null;
+    c.executed = true;
+    const out = { card: c, evil: c.align === 'evil', penalty: 0 };
+    if (out.evil) { t.evilDown++; if (t.evilDown >= t.k) { t.done = true; out.win = { silver: 0, perfect: t.mis === 0 }; } }
+    else { out.penalty = 2; run.cred = Math.max(0, run.cred - 2); t.mis++; }
+    return out;
+  }
+  function endTutorial() {
+    meta.tutorialDone = true;
+    saveMeta();
+    run = null;
+    loadRun();
+  }
+
+  return {
+    get meta() { return meta; }, get run() { return run; },
+    loadMeta, saveMeta, loadRun, saveRun, newRun, flip, setMark, execute, useItem, slotCount,
+    takeReward, skipReward, buy, rest, nextChapter, abandon, has, relicUnlocked, roleUnlocked,
+    startTutorial, tutorialExecute, endTutorial, emit, listeners, agitatorAlive,
+    clearRunOnly() { run = null; store.del(RUN_KEY); },
+    resetAll() { store.del(RUN_KEY); store.del(META_KEY); loadMeta(); run = null; },
+  };
+})();
+
+/* ---- ui.js ---- */
+/* ===== 画面描画と操作 ===== */
+
+const EMBLEM = `<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+<circle cx="50" cy="50" r="46" opacity=".45"/><circle cx="50" cy="50" r="40" stroke-dasharray="1.5 4.5" opacity=".7"/>
+<circle cx="50" cy="16" r="3.5"/><path d="M50 20 V28 M39 30 H61 M50 30 V82 L46.5 76 V34 M50 82 L53.5 76 V34"/>
+<path d="M22 42 H78" /><path d="M22 42 L15 60 M22 42 L29 60 M78 42 L71 60 M78 42 L85 60"/>
+<path d="M13 60 Q22 69 31 60 Z M69 60 Q78 69 87 60 Z" fill="currentColor" fill-opacity=".25"/>
+</svg>`;
+
+const UI = (() => {
+  const app = document.getElementById('app');
+  let toastWrap;
+  let view = null;           // 現在の画面
+  let sel = null;            // 選択中の札
+  let targetSlot = null;     // 対象選択中の道具
+  let typer = null;          // 文字送り
+  let tut = null;            // 手ほどきの状態
+  let ro = null;
+  let busy = false;
+
+  const run = () => Game.run;
+  const T = () => Game.run && Game.run.trial;
+  const SPEEDS = [22, 45, 95, 0];
+
+  /* ---------- 小道具 ---------- */
+  function rich(text) {
+    return esc(text).replace(/⟦(\d+)⟧/g, (_, j) => `<span class="ref" role="button" tabindex="0" data-act="ref" data-ref="${j}">${circ(+j)}</span>`);
+  }
+  const plain = (text) => text.replace(/⟦(\d+)⟧/g, (_, j) => circ(+j));
+
+  function toast(msg, kind = '') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + kind;
+    el.innerHTML = msg;
+    toastWrap.appendChild(el);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600);
+  }
+
+  function modal({ title, body, buttons = [], onClose, cls = '', closable = true }) {
+    const bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title || '')}">
+      ${closable ? '<button class="modal-x" aria-label="閉じる" data-x>×</button>' : ''}
+      ${title ? `<div class="modal-h">${title}</div>` : ''}
+      <div class="modal-b">${body || ''}</div>
+      ${buttons.length ? `<div class="modal-f">${buttons.map((b, i) => `<button class="btn small ${b.cls || ''}" data-mb="${i}">${b.label}</button>`).join('')}</div>` : ''}
+    </div>`;
+    const close = () => { bg.remove(); if (onClose) onClose(); };
+    bg.addEventListener('click', (e) => {
+      if (e.target === bg && closable) { Audio2.play('select'); close(); return; }
+      if (e.target.closest('[data-x]')) { Audio2.play('select'); close(); return; }
+      const b = e.target.closest('[data-mb]');
+      if (b) {
+        Audio2.play('select');
+        const spec = buttons[+b.dataset.mb];
+        const keep = spec.onClick && spec.onClick(bg) === false;
+        if (!keep) close();
+      }
+    });
+    app.appendChild(bg);
+    const f = bg.querySelector('[data-mb]') || bg.querySelector('[data-x]');
+    if (f) f.focus({ preventScroll: true });
+    return { el: bg, close };
+  }
+  const confirmBox = (title, text, okLabel, onOk, danger) => modal({
+    title, body: `<p>${text}</p>`,
+    buttons: [{ label: 'やめる', cls: 'ghost' }, { label: okLabel, cls: danger ? 'danger' : 'primary', onClick: onOk }],
+  });
+
+  function candlesHTML(cur, max, snuffFrom) {
+    let s = '';
+    for (let i = 0; i < max; i++) {
+      const lit = i < cur;
+      const snuff = snuffFrom != null && i >= cur && i < snuffFrom;
+      s += `<span class="candle ${lit ? '' : snuff ? 'snuff' : 'out'}"><i class="fl"></i></span>`;
+    }
+    return s;
+  }
+
+  function setScreen(html, cls) {
+    if (ro) { ro.disconnect(); ro = null; }
+    stopTyping();
+    app.querySelectorAll('.scr, .overlay, .modal-bg, .guide-box').forEach((n) => n.remove());
+    const el = document.createElement('div');
+    el.className = 'scr ' + cls;
+    el.innerHTML = html;
+    app.insertBefore(el, toastWrap);
+    return el;
+  }
+
+  /* ---------- ルーティング ---------- */
+  function route() {
+    const r = run();
+    if (!r) return showTitle();
+    if (r.phase === 'trial' || r.phase === 'gameover') return showTrial(true);
+    if (r.phase === 'reward') return showReward();
+    if (r.phase === 'interlude') return showInterlude();
+    if (r.phase === 'victory') return showVictory();
+    showTitle();
+  }
+
+  /* ========== タイトル ========== */
+  function showTitle() {
+    view = 'title';
+    Audio2.setMood('title');
+    const m = Game.meta;
+    const r = run();
+    const canContinue = r && !r.tutorial && (r.phase === 'trial' || r.phase === 'reward' || r.phase === 'interlude');
+    const newCount = (m.newUnlocks || []).length;
+    setScreen(`
+      <div class="title-inner">
+        <div class="candles-deco" aria-hidden="true">
+          <span class="candle" style="height:30px"><i class="fl"></i></span>
+          ${EMBLEM.replace('<svg ', '<svg class="crest" ')}
+          <span class="candle" style="height:38px"><i class="fl"></i></span>
+        </div>
+        <h1>偽りの廷</h1>
+        <div class="ruby">いつわりのてい</div>
+        <div class="sub">Uncovering the Truth</div>
+        <nav class="menu">
+          ${canContinue ? `<button class="btn primary" data-act="continue">続きから<small style="font-size:11px;letter-spacing:.05em;color:var(--ash)">　${esc(CHAPTERS[r.chapter].no)}・信用${r.cred}</small></button>` : ''}
+          <button class="btn ${canContinue ? '' : 'primary'}" data-act="new">新たな審問</button>
+          <button class="btn" data-act="tutorial">手ほどき${m.tutorialDone ? '' : '<span class="badge-new">初めての方へ</span>'}</button>
+          <div class="menu-row">
+            <button class="btn" data-act="codex">身分図鑑${newCount ? '<span class="badge-new">新</span>' : ''}</button>
+            <button class="btn" data-act="relics">聖遺物録</button>
+            <button class="btn" data-act="records">記録</button>
+            <button class="btn" data-act="settings">設定</button>
+          </div>
+        </nav>
+        <div class="title-foot">累計審判 ${m.trialsCleared}　／　勝利 ${m.wins}　／　到達階位 ${esc(RANKS[m.maxRank].name)}</div>
+      </div>`, 'title');
+  }
+
+  function startNewFlow() {
+    const m = Game.meta;
+    const r = run();
+    const go = () => {
+      if (m.maxRank > 0) return rankSelect();
+      beginRun(0);
+    };
+    const proceed = () => {
+      if (!m.tutorialDone) {
+        modal({
+          title: '初めての審問官へ',
+          body: '<p>この廷の掟を、まず小さな審判で学べます。三分ほどで終わります。</p>',
+          buttons: [{ label: 'すぐに始める', cls: 'ghost', onClick: () => { Game.meta.tutorialDone = true; Game.saveMeta(); setTimeout(go, 0); } },
+            { label: '手ほどきを受ける', cls: 'primary', onClick: () => setTimeout(startTutorial, 0) }],
+        });
+      } else go();
+    };
+    if (r && !r.tutorial && (r.phase === 'trial' || r.phase === 'reward' || r.phase === 'interlude')) {
+      confirmBox('新たな審問', '進行中の審問は破棄されます。よろしいですか。', '破棄して始める', () => { setTimeout(proceed, 0); }, true);
+    } else proceed();
+  }
+
+  function rankSelect() {
+    const m = Game.meta;
+    const body = `<div class="rank-list">${RANKS.map((rk, i) => `
+      <button class="rank-opt" data-rank="${i}" ${i > m.maxRank ? 'disabled' : ''}>
+        <span class="rn">${['0', 'I', 'II', 'III', 'IV', 'V'][i]}</span><b>${esc(rk.name)}</b>
+        <span>${i === 0 ? rk.desc : '以下を累積：' + RANKS.slice(1, i + 1).map((x) => x.desc).join(' ')}${i > m.maxRank ? '（一つ下の階位で勝利すると解禁）' : ''}</span>
+      </button>`).join('')}</div>`;
+    const md = modal({ title: '階位を選ぶ', body });
+    md.el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-rank]');
+      if (b && !b.disabled) { md.close(); beginRun(+b.dataset.rank); }
+    });
+  }
+
+  function beginRun(rank) {
+    Game.newRun(rank);
+    showTrial(false, true);
+  }
+
+  /* ========== 審判 ========== */
+  function showTrial(resume, fresh) {
+    view = 'trial';
+    sel = null; targetSlot = null;
+    const r = run(), t = T();
+    const ch = t.tutorial ? { no: '手ほどき', name: '霧の村の小さな審判' } : CHAPTERS[t.chapter];
+    Audio2.setMood(t.boss ? 'boss' : 'trial');
+    const trialLabel = t.tutorial ? '練習の審判' : (CHAPTERS[t.chapter].final ? '最終審判' : `第${KANJI_NUM[t.idx + 1]}審`);
+    const el = setScreen(`
+      <header class="hud">
+        <button class="hud-menu" data-act="menu" aria-label="メニュー">☰</button>
+        <div class="hud-where"><b>${esc(ch.no)}　${esc(ch.name)}</b><span>${trialLabel}${t.boss ? `　<span class="boss-tag">首魁の審判</span>` : ''}</span></div>
+        <div class="cred" id="cred" aria-label="信用"></div>
+        <div class="silver" id="silver"></div>
+      </header>
+      <div class="countbar" id="countbar"></div>
+      <main class="stage">
+        <section class="board-wrap" id="bwrap"><div class="board" id="board"></div></section>
+        <aside class="side">
+          <div class="panel detail" id="detail"></div>
+          <div class="panel log" id="log"></div>
+        </aside>
+      </main>
+      <footer class="tools">
+        <div class="items" id="items"></div>
+        <div class="tbtn"><button class="icon-btn" data-act="rules">掟</button><button class="icon-btn" data-act="codexbtn">図鑑</button></div>
+      </footer>`, 'trial');
+    const board = el.querySelector('#board');
+    board.style.setProperty('--cols', t.C);
+    board.innerHTML = t.cards.map(cardHTML).join('');
+    t.cards.forEach((c) => updateCard(c.i));
+    renderHud(); renderCount(); renderDetail(); renderLog(); renderItems();
+    const wrap = el.querySelector('#bwrap');
+    ro = new ResizeObserver(fitBoard);
+    ro.observe(wrap);
+    fitBoard();
+    if (r.phase === 'gameover') { setTimeout(() => showGameOver(), 200); return; }
+    if (t.done && !t.tutorial) { setTimeout(() => showTrialEndOverlay({}), 200); return; }
+    if (t.tutorial) { tutStart(); return; }
+    if (!t.introSeen) { t.introSeen = true; Game.saveRun(); trialIntro(); }
+  }
+
+  function fitBoard() {
+    const t = T();
+    const wrap = document.getElementById('bwrap');
+    if (!t || !wrap) return;
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    const gap = clamp(Math.round(Math.min(W, H) * 0.025), 6, 14);
+    let cw = Math.min((W - gap * (t.C - 1) - 12) / t.C, (H - gap * (t.R - 1) - 18) / (t.R * 1.38));
+    cw = clamp(Math.floor(cw), 44, 150);
+    const board = document.getElementById('board');
+    board.style.setProperty('--cw', cw + 'px');
+    board.style.setProperty('--gap', gap + 'px');
+  }
+
+  function trialIntro() {
+    const t = T();
+    const ch = CHAPTERS[t.chapter];
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    const first = t.idx === 0;
+    const label = ch.final ? '最終審判' : `第${KANJI_NUM[t.idx + 1]}審`;
+    ov.innerHTML = `<div class="ov-inner">
+      ${first ? `<div class="chap-title"><span>${esc(ch.no)}</span><b>${esc(ch.name)}</b></div><p class="story">${esc(ch.intro)}</p>` : ''}
+      <div class="stamp-big" style="font-size:clamp(30px,8vw,46px)">${label}</div>
+      <p class="ov-sub">容疑者 ${t.n}人　虚偽者 ${t.k}人　惑い者 ${t.u}人</p>
+      ${t.boss ? `<p class="ov-sub" style="color:#ef9aa6">この廷には首魁『${esc(ROLE[t.boss].name)}』が潜む。<br><small style="color:var(--ash)">${esc(ROLE[t.boss].desc)}</small></p>` : ''}
+      <button class="btn primary" data-act="close-ov">審問を始める</button>
+    </div>`;
+    app.insertBefore(ov, toastWrap);
+    Audio2.play('flip');
+  }
+
+  function cardHTML(c) {
+    const ro2 = ROLE[c.claim];
+    return `<button class="card" data-act="card" data-i="${c.i}" aria-label="${circ(c.i)}">
+      <div class="card-in">
+        <div class="face back"><span class="num">${circ(c.i)}</span>${EMBLEM}</div>
+        <div class="face front"><span class="num">${circ(c.i)}</span>
+          <div class="por">${Portrait.make(c.face)}</div>
+          <div class="card-meta"><div class="nm">${esc(c.name)}</div><div class="rl"><i class="glyph ${ro2.open ? ro2.align : ''}">${ro2.glyph}</i>${esc(ro2.name)}</div></div>
+        </div>
+      </div>
+      <div class="ovl"></div>
+    </button>`;
+  }
+  const cardEl = (i) => document.querySelector(`.card[data-i="${i}"]`);
+
+  const MARKS = { white: '白', black: '黒', unr: '惑', q: '？' };
+
+  function verdictHTML(c) {
+    const cls = c.align === 'evil' ? 'evil' : c.align === 'med' ? 'med' : 'good';
+    const label = c.align === 'evil' ? '虚偽者' : c.align === 'med' ? '惑い者' : '無辜';
+    let sub = ROLE[c.role].name;
+    if (c.afflict) sub += c.afflict === 'poison' ? '・毒' : '・魅了';
+    return `<div class="verdict ${cls}">${label}<small>${esc(sub)}</small></div>`;
+  }
+
+  function updateCard(i) {
+    const t = T(), c = t.cards[i], el = cardEl(i);
+    if (!el) return;
+    const ro2 = ROLE[c.claim];
+    const showAll = t.done || run().phase === 'gameover';
+    el.classList.toggle('flipped', c.flipped || showAll);
+    el.classList.toggle('selected', sel === i);
+    el.classList.toggle('executed', c.executed);
+    el.classList.toggle('open-evil', ro2.open && (ro2.align === 'minion' || ro2.align === 'boss'));
+    el.classList.toggle('open-med', ro2.open && ro2.align === 'med');
+    el.classList.toggle('reveal-evil', (c.executed || showAll) && c.align === 'evil');
+    let h = '';
+    if (c.mark) h += `<span class="mk ${c.mark}">${MARKS[c.mark]}</span>`;
+    if (c.seal) h += `<span class="seal-top"><span class="mk ${c.seal}" title="${c.seal === 'white' ? '無辜と判明' : '惑い者と判明'}">${c.seal === 'white' ? '白' : '惑'}</span></span>`;
+    const chips = [];
+    if (c.truthShown && c.flipped) chips.push(statementTruth(t, i) ? '<span class="chip t">真</span>' : '<span class="chip f">偽</span>');
+    if (c.holy) chips.push(c.holy === 'good' ? '<span class="chip holy-good">善</span>' : '<span class="chip holy-evil">悪</span>');
+    if (c.identity) chips.push(`<span class="chip id">${ROLE[c.identity].glyph}</span>`);
+    if (c.afflictShown && c.afflict) chips.push(`<span class="chip aff">${c.afflict === 'poison' ? '毒' : '魅'}</span>`);
+    if (c.crow != null) chips.push(`<span class="chip id">鴉${c.crow}</span>`);
+    if (chips.length) h += `<div class="chips">${chips.join('')}</div>`;
+    if (c.executed || showAll) h += verdictHTML(c);
+    el.querySelector('.ovl').innerHTML = h;
+  }
+
+  function renderHud(prevCred) {
+    const r = run();
+    const cr = document.getElementById('cred');
+    if (!cr) return;
+    cr.innerHTML = candlesHTML(r.cred, r.maxCred, prevCred) + `<span class="cred-n">${r.cred}/${r.maxCred}</span>`;
+    cr.setAttribute('aria-label', `信用 ${r.cred} / ${r.maxCred}`);
+    document.getElementById('silver').innerHTML = `<i class="coin"></i>${r.silver}`;
+  }
+
+  function renderCount() {
+    const t = T(), r = run();
+    const el = document.getElementById('countbar');
+    if (!el) return;
+    const flipped = t.cards.filter((c) => c.flipped).length;
+    const relics = r.relics.map((id) => `<i class="glyph relic" role="button" tabindex="0" data-act="relic" data-id="${id}" title="${esc(RELIC[id].name)}">${RELIC[id].glyph}</i>`).join('');
+    el.innerHTML = `
+      <span class="liars">虚偽者 <b>${t.evilDown}/${t.k}</b> 処刑</span>
+      <span class="unr">惑い者 <b>${t.u}</b></span>
+      <span>尋問 <b>${flipped}/${t.n}</b></span>
+      ${t.boss ? `<span role="button" tabindex="0" data-act="bossinfo" style="cursor:pointer">首魁 <b style="color:#ef9aa6">${esc(ROLE[t.boss].name)}</b></span>` : ''}
+      ${t.bossRow != null ? `<span class="hint">牙：首魁は上から${KANJI_NUM[t.bossRow + 1]}番目の横列</span>` : ''}
+      ${t.pardon ? '<span class="hint">赦免状が効いている</span>' : ''}
+      ${Game.agitatorAlive(t) && t.cards.some((c) => c.role === 'agitator' && c.flipped) ? '<span class="hint" style="color:#ef9aa6">扇動者が群衆を煽っている</span>' : ''}
+      ${relics ? `<span class="relic-strip">${relics}</span>` : ''}`;
+  }
+
+  function renderItems() {
+    const r = run();
+    const el = document.getElementById('items');
+    if (!el) return;
+    const n = Game.slotCount();
+    let h = '';
+    for (let s = 0; s < n; s++) {
+      const id = r.items[s];
+      if (id) h += `<button class="slot ${targetSlot === s ? 'on' : ''}" data-act="slot" data-slot="${s}"><i class="glyph item">${ITEM[id].glyph}</i>${esc(ITEM[id].name)}</button>`;
+      else h += '<span class="slot empty">空き</span>';
+    }
+    el.innerHTML = h;
+  }
+
+  function stopTyping() {
+    if (typer) { clearInterval(typer.id); typer = null; }
+  }
+  function typeInto(el, text, done) {
+    stopTyping();
+    const speed = SPEEDS[Game.meta.settings.speed];
+    const finish = () => { stopTyping(); el.innerHTML = rich(text); if (done) done(); };
+    if (!speed) { finish(); return; }
+    const p = plain(text);
+    let n = 0;
+    el.innerHTML = '<span class="caret"></span>';
+    typer = {
+      finish,
+      id: setInterval(() => {
+        n++;
+        if (n % 2) Audio2.play('tick');
+        el.innerHTML = esc(p.slice(0, n)) + '<span class="caret"></span>';
+        if (n >= p.length) finish();
+      }, 1000 / speed),
+    };
+  }
+
+  function renderDetail(typeNew) {
+    const t = T(), r = run();
+    const el = document.getElementById('detail');
+    if (!el) return;
+    stopTyping();
+    if (targetSlot != null) {
+      const it = ITEM[r.items[targetSlot]];
+      el.innerHTML = `<div class="dt-empty"><p><i class="glyph item">${it.glyph}</i> <b>${esc(it.name)}</b>を使う相手を盤上から選んでください。</p><p>${esc(it.desc)}</p>
+        <div class="dt-actions"><button class="btn small ghost" data-act="cancel-target">やめる</button></div></div>`;
+      return;
+    }
+    if (sel == null) {
+      const flipped = t.cards.filter((c) => c.flipped).length;
+      el.innerHTML = `<div class="dt-empty">
+        ${flipped < t.n ? '<p><b>伏せられた札に触れると、その者を尋問します。</b>回数に制限はありませんが、尋問の順番を数える者もいます。</p>' : '<p><b>全員の証言が出揃いました。</b>矛盾を突き合わせ、虚偽者を処刑してください。</p>'}
+        <p>無辜は真実を、虚偽者は嘘を語る。惑い者の言葉は当てにならない。</p>
+        <p style="color:var(--ash-dim)">尋問済みの札に触れると、詳細と印・処刑の操作が出ます。</p></div>`;
+      return;
+    }
+    const c = t.cards[sel];
+    const ro2 = ROLE[c.claim];
+    const alignNote = ro2.open ? `<span class="note">${ALIGN_LABEL[ro2.align]}・正体を隠さない</span>` : '<span class="note">名乗った身分</span>';
+    const lines = [];
+    if (c.truthShown) lines.push(statementTruth(t, sel) ? '<span class="vl t">この証言は真実</span>' : '<span class="vl f">この証言は偽り</span>');
+    if (c.holy) lines.push(c.holy === 'good' ? '<span class="vl g">聖水：善</span>' : '<span class="vl f">聖水：悪</span>');
+    if (c.identity) lines.push(`<span class="vl g">蝋燭：真の身分は「${esc(ROLE[c.identity].name)}」</span>`);
+    if (c.afflictShown && c.afflict) lines.push(`<span class="vl p">${c.afflict === 'poison' ? '毒に侵されている' : '魅了されている'}</span>`);
+    if (c.seal === 'white') lines.push('<span class="vl g">無辜と判明</span>');
+    if (c.seal === 'unr') lines.push('<span class="vl p">惑い者と判明</span>');
+    if (c.crow != null) lines.push(`<span class="vl">鴉の眼：周囲八方に虚偽者${c.crow}人</span>`);
+    if (c.executed) lines.push(`<span class="vl ${c.align === 'evil' ? 'f' : 'g'}">処刑済み：${c.align === 'evil' ? '虚偽者' : c.align === 'med' ? '惑い者' : '無辜'}（${esc(ROLE[c.role].name)}）</span>`);
+    const ordIdx = t.order.indexOf(sel);
+    el.innerHTML = `
+      <div class="dt-head">
+        <div class="dt-por">${Portrait.make(c.face)}</div>
+        <div><div class="dt-name">${circ(sel)} ${esc(c.name)}</div>
+        <div class="dt-role"><i class="glyph ${ro2.open ? ro2.align : ''}">${ro2.glyph}</i>${esc(ro2.name)} ${alignNote}</div></div>
+      </div>
+      <p class="dt-desc">${esc(ro2.desc)}${ordIdx >= 0 ? `　<span style="color:var(--ash-dim)">（${ordIdx + 1}番目に尋問）</span>` : ''}</p>
+      <div class="testimony" data-act="skip-type">${c.stmt ? (typeNew ? '' : rich(c.stmt.text)) : '……'}</div>
+      ${lines.length ? `<div class="verdict-line">${lines.join('')}</div>` : ''}
+      ${!c.executed && !t.done ? `
+      <div class="marks"><span>印</span>
+        ${Object.entries(MARKS).map(([k, v]) => `<button class="mbtn ${k} ${c.mark === k ? 'on' : ''}" data-act="mark" data-m="${k}" aria-pressed="${c.mark === k}">${v}</button>`).join('')}
+      </div>
+      <div class="dt-actions"><button class="btn danger" data-act="exec">処刑する</button></div>` : ''}`;
+    if (typeNew && c.stmt) typeInto(el.querySelector('.testimony'), c.stmt.text);
+  }
+
+  function renderLog() {
+    const t = T();
+    const el = document.getElementById('log');
+    if (!el) return;
+    const rows = t.cards.filter((c) => c.flipped).sort((a, b) => a.i - b.i);
+    el.innerHTML = `<h3>証言録<small>番号順・触れると選択</small></h3>` + (rows.length ? `<ol>${rows.map((c) => {
+      const ro2 = ROLE[c.claim];
+      const ord = t.order.indexOf(c.i) + 1;
+      const m = [];
+      if (c.seal) m.push(`<span class="mk ${c.seal}">${c.seal === 'white' ? '白' : '惑'}</span>`);
+      if (c.mark) m.push(`<span class="mk ${c.mark}">${MARKS[c.mark]}</span>`);
+      if (c.truthShown) m.push(statementTruth(t, c.i) ? '<span class="chip t">真</span>' : '<span class="chip f">偽</span>');
+      return `<li class="${sel === c.i ? 'on' : ''} ${c.executed ? 'dead' : ''}" data-act="log" data-i="${c.i}">
+        <span class="ln">${circ(c.i)}</span>
+        <div class="lb"><div class="lr">${esc(c.name)}・<span style="color:${ro2.open ? (ro2.align === 'med' ? 'var(--ghost)' : '#ef9aa6') : 'var(--gold)'}">${esc(ro2.name)}</span><span class="ord">#${ord}</span></div>
+        <div class="lt">${c.stmt ? rich(c.stmt.text) : '……'}</div></div>
+        <span class="lm">${m.join('')}</span></li>`;
+    }).join('')}</ol>` : '<div class="log-empty">まだ誰も尋問していない。</div>');
+  }
+
+  function highlightRefs() {
+    const t = T();
+    document.querySelectorAll('.card.ref').forEach((e) => e.classList.remove('ref'));
+    if (sel == null) return;
+    const c = t.cards[sel];
+    if (!c.stmt || !c.flipped) return;
+    (c.stmt.refs || []).forEach((j) => { const e = cardEl(j); if (e) e.classList.add('ref'); });
+  }
+
+  function select(i, typeNew) {
+    const prev = sel;
+    sel = i;
+    if (prev != null) updateCard(prev);
+    if (i != null) updateCard(i);
+    renderDetail(typeNew);
+    renderLog();
+    highlightRefs();
+  }
+
+  function onCard(i) {
+    if (busy) return;
+    const t = T();
+    const c = t.cards[i];
+    if (targetSlot != null) return applyItem(targetSlot, i);
+    if (t.done || run().phase === 'gameover') { select(sel === i ? null : i); return; }
+    if (!c.flipped) {
+      Game.flip(i);
+      Audio2.play('flip');
+      updateCard(i);
+      select(i, true);
+      renderCount();
+      if (c.truthShown) setTimeout(() => toast(`${circ(i)}の証言は<b>${statementTruth(t, i) ? '真実' : '偽り'}</b>だ。（聖遺物）`), 700);
+      if (c.afflictShown && c.afflict) setTimeout(() => toast(`白骨の指が震える……${circ(i)}は${c.afflict === 'poison' ? '毒' : '魅了'}を受けている。`), 900);
+      tutEvent('flip', i);
+      // 狭い縦画面では詳細を見せる
+      const d = document.getElementById('detail');
+      if (d && window.innerHeight > window.innerWidth) d.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
+    }
+    Audio2.play('select');
+    select(sel === i ? null : i);
+  }
+
+  function askExecute() {
+    const t = T(), c = t.cards[sel];
+    if (!c || c.executed) return;
+    if (!c.flipped) { toast('尋問していない者は裁けない。', 'bad'); return; }
+    const ro2 = ROLE[c.claim];
+    confirmBox('処刑の宣告', `${circ(c.i)} ${esc(c.name)}（${esc(ro2.name)}）を処刑しますか。<br><small style="color:var(--ash)">無辜なら信用−2、惑い者なら信用−1${c.claim === 'jester' ? '（道化は−3）' : ''}。</small>`, '処刑する', () => { setTimeout(() => doExecute(c.i), 50); }, true);
+  }
+
+  function doExecute(i) {
+    const r = run(), t = T();
+    busy = true;
+    const el = cardEl(i);
+    el.classList.add('shake');
+    const sl = document.createElement('div'); sl.className = 'slash'; el.appendChild(sl);
+    Audio2.play('execute');
+    const before = r.cred;
+    setTimeout(() => {
+      el.classList.remove('shake'); sl.remove();
+      const out = t.tutorial ? Game.tutorialExecute(i) : Game.execute(i);
+      busy = false;
+      if (!out) return;
+      const fl = document.createElement('div');
+      fl.className = 'flash' + (out.evil ? ' gold' : '');
+      app.appendChild(fl); setTimeout(() => fl.remove(), 800);
+      updateCard(i);
+      renderHud(before);
+      renderCount();
+      renderDetail();
+      renderLog();
+      if (out.evil) {
+        Audio2.play('good');
+        toast(`<b>${esc(t.cards[i].name)}</b>は虚偽者「${esc(ROLE[t.cards[i].role].name)}」だった！${out.silver ? `　銀貨＋${out.silver}` : ''}`, 'good');
+      } else {
+        Audio2.play('bad');
+        const who = t.cards[i].align === 'med' ? '惑い者' : '無辜の者';
+        const saved = out.saved === 'pardon' ? '……だが赦免状が信用を守った。' : out.saved === 'kuroneko' ? '……黒猫の骨が災いを払った。' : `信用−${out.penalty}`;
+        toast(`<b>${esc(t.cards[i].name)}</b>は${who}だった。${saved}`, 'bad');
+      }
+      if (out.crow != null) setTimeout(() => toast(`鴉の眼：その者の周囲八方に、虚偽者は${out.crow}人いた。`), 600);
+      tutEvent('exec', i, out);
+      if (out.gameover) { setTimeout(showGameOver, 1100); return; }
+      if (out.win) {
+        if (t.tutorial) return;
+        setTimeout(() => revealAll(() => showTrialEndOverlay(out)), 700);
+      }
+    }, 520);
+  }
+
+  function revealAll(done) {
+    const t = T();
+    const hidden = t.cards.filter((c) => !c.flipped);
+    hidden.forEach((c, x) => setTimeout(() => { updateCard(c.i); Audio2.play('flip'); }, x * 120));
+    t.cards.forEach((c) => setTimeout(() => updateCard(c.i), hidden.length * 120));
+    setTimeout(done, hidden.length * 120 + 900);
+  }
+
+  function showTrialEndOverlay(out) {
+    const r = run(), t = T();
+    Audio2.play('victory');
+    const w = out.win || {};
+    const unlocks = (out.unlocks || []).map((u) => u.kind === 'role'
+      ? `<div class="unlock-note">新たな身分『${esc(ROLE[u.id].name)}』が、これからの審判に現れるようになった。</div>`
+      : `<div class="unlock-note">新たな聖遺物『${esc(RELIC[u.id].name)}』が見つかるようになった。</div>`).join('');
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.innerHTML = `<div class="ov-inner">
+      <div class="stamp-big">審理終結</div>
+      <p class="ov-sub">虚偽者${t.k}人すべてに裁きが下された。</p>
+      <div class="ledger">
+        ${w.silver != null ? `<div><span>報酬の銀貨</span><span>＋${w.silver}</span></div>` : ''}
+        <div><span>誤った処刑</span><span>${t.mis}</span></div>
+        ${w.perfect ? '<div><span>完全審理（誤りなし）</span><span>銀貨＋10 込み</span></div>' : ''}
+        ${w.healed ? `<div><span>灰の祈祷書</span><span>信用＋${w.healed}</span></div>` : ''}
+        <div><span>信用</span><span>${r.cred} / ${r.maxCred}</span></div>
+      </div>
+      ${unlocks}
+      <div class="center-row">
+        <button class="btn ghost" data-act="peek">盤面を確かめる</button>
+        <button class="btn primary" data-act="to-next">判決を記す</button>
+      </div>
+    </div>`;
+    app.insertBefore(ov, toastWrap);
+  }
+
+  function showGameOver() {
+    const r = run(), t = T(), m = Game.meta;
+    Audio2.play('gameover');
+    Audio2.setMood('calm');
+    t.cards.forEach((c) => updateCard(c.i));
+    const next = ROLES.filter((x) => x.unlock > m.trialsCleared).sort((a, b) => a.unlock - b.unlock)[0];
+    const ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.innerHTML = `<div class="ov-inner">
+      <div class="stamp-big bad">解　任</div>
+      <p class="ov-sub">信用の灯はすべて消えた。審問官の任を解かれる。</p>
+      <div class="ledger">
+        <div><span>到達</span><span>${esc(CHAPTERS[r.chapter].no)}　${esc(CHAPTERS[r.chapter].name)}</span></div>
+        <div><span>終えた審判</span><span>${r.stats.trials}</span></div>
+        <div><span>処刑した虚偽者</span><span>${r.stats.evil}</span></div>
+        <div><span>誤った処刑</span><span>${r.stats.mis}</span></div>
+        <div><span>階位</span><span>${esc(RANKS[r.rank].name)}</span></div>
+      </div>
+      ${next ? `<div class="unlock-note">累計審判 ${m.trialsCleared}。あと${next.unlock - m.trialsCleared}審判で、新たな身分が現れる。</div>` : ''}
+      <div class="center-row">
+        <button class="btn ghost" data-act="peek">盤面を確かめる</button>
+        <button class="btn primary" data-act="end-run">タイトルへ</button>
+      </div>
+    </div>`;
+    app.insertBefore(ov, toastWrap);
+  }
+
+  function peek() {
+    const ov = app.querySelector('.overlay');
+    if (!ov) return;
+    ov.hidden = true;
+    const r = run();
+    const bar = document.createElement('div');
+    bar.className = 'guide-box';
+    bar.style.bottom = 'calc(12px + env(safe-area-inset-bottom, 0px))';
+    bar.innerHTML = `<div class="gf" style="margin:0;justify-content:space-between;align-items:center"><span>盤面を確かめています。札に触れると真の身分が見えます。</span><button class="btn small primary" data-act="unpeek">${r.phase === 'gameover' ? '戻る' : '戻る'}</button></div>`;
+    app.insertBefore(bar, toastWrap);
+  }
+  function unpeek() {
+    app.querySelectorAll('.guide-box').forEach((n) => n.remove());
+    const ov = app.querySelector('.overlay');
+    if (ov) ov.hidden = false;
+  }
+
+  /* ----- 道具 ----- */
+  function onSlot(s) {
+    const r = run(), t = T();
+    if (t.done || r.phase === 'gameover') return;
+    const id = r.items[s];
+    if (!id) return;
+    const it = ITEM[id];
+    Audio2.play('select');
+    if (targetSlot === s) { targetSlot = null; renderItems(); renderDetail(); return; }
+    if (it.target === 'none') {
+      confirmBox(`${it.name}を使う`, esc(it.desc), '使う', () => { setTimeout(() => applyItem(s, null), 0); });
+      return;
+    }
+    targetSlot = s;
+    renderItems();
+    renderDetail();
+  }
+
+  function applyItem(s, target) {
+    const t = T();
+    const res = Game.useItem(s, target);
+    targetSlot = null;
+    renderItems();
+    if (!res) { renderDetail(); return; }
+    if (res.error) { toast(res.error, 'bad'); renderDetail(); return; }
+    Audio2.play('item');
+    const c = res.card;
+    if (res.id === 'holywater') toast(`聖水が${circ(c.i)}に落ちる……<b>${res.result === 'good' ? '善' : '悪'}</b>と出た。`, res.result === 'good' ? '' : 'bad');
+    if (res.id === 'scales') toast(`秤が傾く……${circ(c.i)}の証言は<b>${res.result ? '真実' : '偽り'}</b>。`);
+    if (res.id === 'candle') toast(`蝋燭が照らす……${circ(c.i)}の真の身分は<b>『${esc(ROLE[res.result].name)}』</b>。`);
+    if (res.id === 'pardon') toast('赦免状に署名した。次の誤った処刑は咎められない。');
+    if (res.id === 'wine') toast('葡萄酒が喉を潤す。信用＋2。', 'good');
+    if (res.id === 'lily') toast(`白百合が${circ(c.i)}の前に置かれた。この者は無辜だ。`, 'good');
+    if (c) updateCard(c.i);
+    renderHud(); renderCount();
+    if (c && c.flipped) select(c.i); else { renderDetail(); renderLog(); }
+  }
+
+  /* ========== 報酬 ========== */
+  function optionHTML(o, idx, act, priceTag) {
+    let glyph, name, desc, kind, cls;
+    if (o.type === 'relic') { const x = RELIC[o.id]; glyph = x.glyph; name = x.name; desc = x.desc; kind = 'Relic'; cls = 'relic'; }
+    if (o.type === 'item') { const x = ITEM[o.id]; glyph = x.glyph; name = x.name; desc = x.desc; kind = 'Item'; cls = 'item'; }
+    if (o.type === 'rest') { glyph = '休'; name = '休息'; desc = `信用を${o.amount}回復する。`; kind = 'Rest'; cls = ''; }
+    if (o.type === 'silver') { glyph = '銀'; name = `銀貨 ${o.amount}枚`; desc = '行商人との取引に使える。'; kind = 'Silver'; cls = 'item'; }
+    return `<button class="choice ${o.sold ? 'sold' : ''}" data-act="${act}" data-idx="${idx}" ${o.sold ? 'disabled' : ''}>
+      <span class="kind">${kind}</span><i class="glyph ${cls}">${glyph}</i><b>${esc(name)}</b><p>${esc(desc)}</p>
+      ${priceTag ? `<span class="price"><i class="coin"></i>${o.price}</span>` : ''}</button>`;
+  }
+
+  function statusBar() {
+    const r = run();
+    return `<div class="statusbar">
+      <span class="cred">${candlesHTML(r.cred, r.maxCred)}<span class="cred-n">${r.cred}/${r.maxCred}</span></span>
+      <span class="silver"><i class="coin"></i>${r.silver}</span>
+      <span>道具 ${r.items.length}/${Game.slotCount()}</span>
+      ${r.relics.length ? `<span class="relic-strip">${r.relics.map((id) => `<i class="glyph relic" role="button" tabindex="0" data-act="relic" data-id="${id}" title="${esc(RELIC[id].name)}">${RELIC[id].glyph}</i>`).join('')}</span>` : ''}
+    </div>`;
+  }
+  function progressHTML() {
+    const r = run();
+    let h = '<div class="progress" aria-label="進行">';
+    CHAPTERS.forEach((ch, ci) => {
+      if (ci) h += '<span class="sep"></span>';
+      ch.trials.forEach((_, ti) => {
+        const done = ci < r.chapter || (ci === r.chapter && ti < r.trialIdx) || (ci === r.chapter && ti === r.trialIdx && r.phase !== 'trial');
+        const cur = ci === r.chapter && ti === r.trialIdx && r.phase === 'trial';
+        h += `<i class="${done ? 'done' : cur ? 'cur' : ''}"></i>`;
+      });
+    });
+    return h + '</div>';
+  }
+
+  function showReward() {
+    view = 'reward';
+    Audio2.setMood('calm');
+    const r = run();
+    const boss = CHAPTERS[r.chapter].trials[r.trialIdx].boss;
+    setScreen(`<div class="page-inner">
+      ${progressHTML()}
+      <h2>${boss ? '首魁の遺したもの' : '審判の報酬'}</h2>
+      <p class="lead">${boss ? '首魁の懐から、古い聖遺物が見つかった。一つを選べ。' : '一つを選べ。'}</p>
+      ${statusBar()}
+      <div class="choices">${r.reward.options.map((o, i) => optionHTML(o, i, 'take')).join('')}</div>
+      <div class="center-row"><button class="btn ghost small" data-act="skip-reward">何も受け取らずに進む</button></div>
+    </div>`, 'page');
+  }
+
+  function showInterlude() {
+    view = 'interlude';
+    Audio2.setMood('calm');
+    const r = run();
+    const ch = CHAPTERS[r.chapter];
+    const next = CHAPTERS[r.chapter + 1];
+    const OUTRO = [
+      '狼の王は斃れ、霧はわずかに薄れた。村人の一人が呟く。「港の司教様が、あれを村へ寄越したのだ」と。',
+      '黒衣の司教の杯は割られた。積み荷の帳簿には、都の鐘楼の印章が押されていた。',
+      '都の首魁は裁かれた。鐘の音が止んだ夜、大聖堂の扉だけが開いていた。',
+      '大聖堂の祈りは途絶えた。最後の扉の向こうで、すべての嘘の源が待っている。',
+    ];
+    setScreen(`<div class="page-inner">
+      ${progressHTML()}
+      <div class="chap-title"><span>${esc(ch.no)}　終幕</span><b>${esc(ch.name)}</b></div>
+      <p class="story">${esc(OUTRO[r.chapter] || '')}</p>
+      ${statusBar()}
+      <div class="orn">Interlude</div>
+      <p class="lead">街道の宿。行商人が荷を広げている。</p>
+      <div class="choices">${r.shop.goods.map((g, i) => optionHTML(g, i, 'buy', true)).join('')}</div>
+      <div class="center-row">
+        <button class="btn" data-act="rest" ${r.shop.rested ? 'disabled' : ''}>${r.shop.rested ? '休息を取った' : `宿で休む（信用＋${r.rank >= 5 ? 1 : 2}）`}</button>
+        <button class="btn primary" data-act="next-chapter">${esc(next.no)}『${esc(next.name)}』へ</button>
+      </div>
+    </div>`, 'page');
+  }
+
+  function showVictory() {
+    view = 'victory';
+    Audio2.setMood('calm');
+    Audio2.play('victory');
+    const r = run(), m = Game.meta;
+    const unlockedRank = r.rank + 1 < RANKS.length && m.maxRank >= r.rank + 1;
+    setScreen(`<div class="page-inner" style="margin:auto 0;text-align:center">
+      <div class="stamp-big" style="font-size:clamp(28px,8.4vw,54px);letter-spacing:.12em;text-indent:.12em">偽りは暴かれた</div>
+      <p class="story">偽りの廷主が斃れたとき、廷を満たしていた囁きは一斉に止んだ。<br>蝋燭の灯の下、残されたのは真実だけ。<br>審問官よ、あなたの名は、この夜の記録に刻まれる。</p>
+      <div class="ledger" style="max-width:420px;margin:0 auto">
+        <div><span>階位</span><span>${esc(RANKS[r.rank].name)}</span></div>
+        <div><span>終えた審判</span><span>${r.stats.trials}</span></div>
+        <div><span>処刑した虚偽者</span><span>${r.stats.evil}</span></div>
+        <div><span>誤った処刑</span><span>${r.stats.mis}</span></div>
+        <div><span>残った信用</span><span>${r.cred} / ${r.maxCred}</span></div>
+      </div>
+      ${unlockedRank ? `<div class="unlock-note" style="max-width:420px;margin:0 auto">新たな階位『${esc(RANKS[r.rank + 1].name)}』で審問できるようになった。</div>` : ''}
+      <div class="center-row"><button class="btn primary" data-act="end-run">タイトルへ</button></div>
+    </div>`, 'page');
+  }
+
+  /* ========== 各種の帳面 ========== */
+  function rulesBody() {
+    return `<div class="rules">
+      <h4>審問官の務め</h4>
+      <ul><li>盤上に潜む<b>虚偽者</b>を全員処刑すれば、その審判は終わる。虚偽者と惑い者の人数は常に示される。</li>
+      <li>全${CHAPTERS.length - 1}章（各3審判）と最終審判を越えれば勝利。</li></ul>
+      <h4>尋問</h4>
+      <ul><li>伏せ札に触れると尋問し、その者が<b>名乗る身分</b>と<b>証言</b>が明らかになる。</li>
+      <li>回数の制限はない。ただし<b>鐘撞き</b>や<b>墓守</b>のように、尋問の順番を数える者もいる。</li></ul>
+      <h4>三つの立場</h4>
+      <ul><li><b>無辜</b>：必ず真実を語る。</li>
+      <li><b>虚偽者</b>（従者・首魁）：必ず嘘をつく。多くは無辜の身分を騙り、その身分の作法で嘘をつく。一部は正体を隠さない。</li>
+      <li><b>惑い者</b>：善側だが、証言は当てにならない。生まれつきの惑い者のほか、<b>毒</b>や<b>魅了</b>を受けた無辜も惑い者として数える。</li></ul>
+      <h4>手がかりの掟</h4>
+      <ul><li><b>善側（無辜・惑い者）の身分は重複しない。</b>同じ身分を名乗る者が二人いれば、少なくとも一方は虚偽者。</li>
+      <li><b>上下左右</b>＝隣り合う4方向。<b>周囲八方</b>＝斜めを含む8方向。<b>歩</b>＝上下左右に進む歩数。</li>
+      <li><b>陣営</b>＝虚偽者か、そうでないか。証言の数には、すでに処刑された者も含まれる。</li>
+      <li>盤面によっては、論理だけでは二通りに絞るのが限界のこともある。道具や聖遺物で見極めよう。</li></ul>
+      <h4>処刑と信用</h4>
+      <ul><li>無辜を処刑すると<b>信用−2</b>、惑い者なら<b>−1</b>（道化は−3）。信用が尽きると<b>解任</b>。</li>
+      <li>白・黒・惑・？の<b>印</b>で推理を整理できる。印は判定に影響しない。</li></ul>
+      <h4>道具と聖遺物</h4>
+      <ul><li><b>道具</b>は一度きりの使い捨て。<b>聖遺物</b>はその審問のあいだ効果が続く。</li>
+      <li>審判を終えると報酬を一つ選べる。章の終わりには行商人と宿がある。</li></ul>
+    </div>`;
+  }
+  function showRules() { modal({ title: '廷の掟', body: rulesBody() }); }
+
+  function showCodex(tab = 'good') {
+    const m = Game.meta;
+    if (m.newUnlocks && m.newUnlocks.length) { m.newUnlocks = []; Game.saveMeta(); }
+    const tabs = [['good', '無辜'], ['med', '惑い者'], ['minion', '従者'], ['boss', '首魁']];
+    const md = modal({ title: '身分図鑑', body: '' });
+    const b = md.el.querySelector('.modal-b');
+    const tabsEl = document.createElement('div');
+    tabsEl.className = 'tabs';
+    b.before(tabsEl);
+    const draw = (tb) => {
+      tabsEl.innerHTML = tabs.map(([k, v]) => `<button class="tab ${k === tb ? 'on' : ''}" data-tab="${k}">${v}</button>`).join('');
+      const list = ROLES.filter((r) => r.align === tb);
+      b.innerHTML = list.map((r) => {
+        const un = Game.roleUnlocked(r);
+        if (!un) return `<div class="entry locked"><i class="glyph">？</i><div class="entry-n">？？？</div><div class="entry-d">累計${r.unlock}審判を終えると現れる。</div></div>`;
+        return `<div class="entry"><i class="glyph ${r.align}">${r.glyph}</i>
+          <div class="entry-n">${esc(r.name)}<small>${ALIGN_LABEL[r.align]}${r.open ? '・正体を隠さない' : ''}${r.finalOnly ? '・終章のみ' : ''}</small></div>
+          <div class="entry-d">${esc(r.desc)}<em>${esc(r.lore)}</em></div></div>`;
+      }).join('');
+      b.scrollTop = 0;
+    };
+    tabsEl.addEventListener('click', (e) => { const x = e.target.closest('[data-tab]'); if (x) { Audio2.play('select'); draw(x.dataset.tab); } });
+    draw(tab);
+  }
+
+  function showRelics() {
+    const r = run();
+    const owned = r && !r.tutorial ? r.relics : [];
+    const body = (owned.length ? `<div class="orn" style="margin:6px 0">この審問で所持</div>` + owned.map((id) => {
+      const x = RELIC[id];
+      return `<div class="entry"><i class="glyph relic">${x.glyph}</i><div class="entry-n">${esc(x.name)}</div><div class="entry-d">${esc(x.desc)}</div></div>`;
+    }).join('') + '<div class="orn" style="margin:12px 0 6px">すべての聖遺物</div>' : '') + RELICS.map((x) => {
+      const un = Game.relicUnlocked(x);
+      return `<div class="entry ${un ? '' : 'locked'}"><i class="glyph relic">${un ? x.glyph : '？'}</i><div class="entry-n">${un ? esc(x.name) : '？？？'}<small>${un ? '' : esc(RELIC_UNLOCK_LABEL[x.unlock])}</small></div><div class="entry-d">${un ? esc(x.desc) : '解禁条件：' + esc(RELIC_UNLOCK_LABEL[x.unlock])}</div></div>`;
+    }).join('');
+    modal({ title: '聖遺物録', body });
+  }
+
+  function showRecords() {
+    const m = Game.meta;
+    const unRoles = ROLES.filter(Game.roleUnlocked).length;
+    const unRelics = RELICS.filter(Game.relicUnlocked).length;
+    modal({
+      title: '審問の記録',
+      body: `<div class="ledger">
+        <div><span>審問の回数</span><span>${m.runs}</span></div>
+        <div><span>勝利</span><span>${m.wins}</span></div>
+        <div><span>累計審判</span><span>${m.trialsCleared}</span></div>
+        <div><span>処刑した虚偽者</span><span>${m.evilCaught}</span></div>
+        <div><span>誤った処刑</span><span>${m.misExec}</span></div>
+        <div><span>最高到達</span><span>${m.bestChapter >= 0 ? esc(CHAPTERS[Math.min(m.bestChapter + 1, CHAPTERS.length - 1)].no) + 'まで' : '―'}</span></div>
+        <div><span>到達階位</span><span>${esc(RANKS[m.maxRank].name)}</span></div>
+        <div><span>解禁した身分</span><span>${unRoles} / ${ROLES.length}</span></div>
+        <div><span>解禁した聖遺物</span><span>${unRelics} / ${RELICS.length}</span></div>
+      </div>`,
+    });
+  }
+
+  function showSettings() {
+    const s = Game.meta.settings;
+    const md = modal({ title: '設定', body: '' });
+    const b = md.el.querySelector('.modal-b');
+    const draw = () => {
+      b.innerHTML = `
+        <div class="setting-row"><span>音楽</span><div class="seg"><button class="${s.bgm ? 'on' : ''}" data-set="bgm" data-v="1">あり</button><button class="${!s.bgm ? 'on' : ''}" data-set="bgm" data-v="0">なし</button></div></div>
+        <div class="setting-row"><span>効果音</span><div class="seg"><button class="${s.sfx ? 'on' : ''}" data-set="sfx" data-v="1">あり</button><button class="${!s.sfx ? 'on' : ''}" data-set="sfx" data-v="0">なし</button></div></div>
+        <div class="setting-row"><span>文字送り</span><div class="seg">${['遅い', '普通', '速い', '瞬時'].map((l, i) => `<button class="${s.speed === i ? 'on' : ''}" data-set="speed" data-v="${i}">${l}</button>`).join('')}</div></div>
+        <div class="setting-row"><span>記録をすべて消す</span><button class="btn small danger" data-set="reset">消去</button></div>
+        <p style="color:var(--ash-dim);font-size:12px;margin-top:12px">進行と解禁はこの端末のブラウザに自動で保存されます。</p>`;
+    };
+    b.addEventListener('click', (e) => {
+      const x = e.target.closest('[data-set]');
+      if (!x) return;
+      Audio2.play('select');
+      const k = x.dataset.set;
+      if (k === 'reset') {
+        confirmBox('記録の消去', '解禁した身分・聖遺物・階位、進行中の審問がすべて失われます。', '消去する', () => {
+          Game.resetAll(); md.close(); toast('記録を消去しました。'); showTitle();
+        }, true);
+        return;
+      }
+      if (k === 'speed') s.speed = +x.dataset.v;
+      else s[k] = x.dataset.v === '1';
+      Audio2.setBgm(s.bgm); Audio2.setSfx(s.sfx);
+      Game.saveMeta();
+      draw();
+    });
+    draw();
+  }
+
+  function showMenu() {
+    const r = run();
+    const isTut = r && r.tutorial;
+    const md = modal({
+      title: 'メニュー',
+      body: `<div class="menu" style="margin:0">
+        <button class="btn" data-m="rules">廷の掟</button>
+        <button class="btn" data-m="codex">身分図鑑</button>
+        ${isTut ? '' : '<button class="btn" data-m="relics">聖遺物録</button>'}
+        <button class="btn" data-m="settings">設定</button>
+        ${isTut ? '<button class="btn" data-m="endtut">手ほどきを終える</button>' : '<button class="btn" data-m="title">タイトルへ（自動保存）</button><button class="btn danger" data-m="abandon">審問を放棄する</button>'}
+      </div>`,
+    });
+    md.el.addEventListener('click', (e) => {
+      const x = e.target.closest('[data-m]');
+      if (!x) return;
+      Audio2.play('select');
+      const k = x.dataset.m;
+      md.close();
+      if (k === 'rules') showRules();
+      if (k === 'codex') showCodex();
+      if (k === 'relics') showRelics();
+      if (k === 'settings') showSettings();
+      if (k === 'title') showTitle();
+      if (k === 'endtut') { Game.endTutorial(); showTitle(); }
+      if (k === 'abandon') confirmBox('審問の放棄', 'この審問を終わらせます。解禁の進み具合は残ります。', '放棄する', () => { Game.abandon(); setTimeout(showTitle, 0); }, true);
+    });
+  }
+
+  /* ========== 手ほどき ========== */
+  const TUT = [
+    { text: '審問官よ、ようこそ。<br>伏せられた六枚の札が、今宵の容疑者たちだ。この中に<b>虚偽者が一人</b>潜んでいる。', wait: 'next' },
+    { text: 'まずは<b>①</b>の札に触れて、尋問してみよう。', wait: 'flip', target: [0] },
+    { text: '名乗った身分と証言が明らかになった。<b>無辜は必ず真実を語り、虚偽者は必ず嘘をつく。</b><br>残る五人も、すべて尋問しよう。', wait: 'allflip' },
+    { text: '<b>③</b>の告発人は「①は虚偽者だ」と言っている。<br>もし本当に①が虚偽者なら、①の証言は嘘のはずだ。', wait: 'next', target: [2, 0] },
+    { text: '①は「上下左右（②と④）に虚偽者は0人」と言った。これが嘘なら、②か④にも虚偽者がいることになる。<br>だが虚偽者は一人だけ――<b>矛盾</b>だ。', wait: 'next', target: [0, 1, 3] },
+    { text: 'つまり①は無辜。①を偽って告発した<b>③こそが嘘つき</b>だ。<br>③を選び、「処刑する」を押そう。（印をつけて整理することもできる）', wait: 'exec', target: [2] },
+  ];
+  function tutStart() {
+    tut = { step: 0 };
+    tutRender();
+  }
+  function tutRender() {
+    app.querySelectorAll('.guide-box').forEach((n) => n.remove());
+    document.querySelectorAll('.card.guide').forEach((e) => e.classList.remove('guide'));
+    if (!tut) return;
+    const s = TUT[tut.step];
+    if (!s) return;
+    (s.target || []).forEach((i) => { const e = cardEl(i); if (e) e.classList.add('guide'); });
+    const box = document.createElement('div');
+    box.className = 'guide-box guide-inline';
+    box.innerHTML = `<div class="who">The Elder Inquisitor</div><div>${s.text}</div>
+      ${s.wait === 'next' ? '<div class="gf"><button class="btn small primary" data-act="tut-next">次へ</button></div>' : ''}`;
+    const side = app.querySelector('.side');
+    if (side) { side.prepend(box); side.scrollTop = 0; } else app.insertBefore(box, toastWrap);
+  }
+  function tutEvent(type, i, out) {
+    if (!tut) return;
+    const s = TUT[tut.step];
+    const t = T();
+    if (type === 'exec') {
+      if (out && out.evil) {
+        tut = null;
+        app.querySelectorAll('.guide-box').forEach((n) => n.remove());
+        document.querySelectorAll('.card.guide').forEach((e) => e.classList.remove('guide'));
+        setTimeout(() => revealAll(() => {
+          Audio2.play('victory');
+          modal({
+            title: '見事だ',
+            closable: false,
+            body: `<p>虚偽者を全員処刑すれば、審判は終わる。</p>
+              <p>誤って無辜を処刑すると、上の<b>信用の蝋燭</b>が消える。すべて消えれば解任だ。</p>
+              <p>本番では、善側なのに当てにならない<b>惑い者</b>や、正体を隠さぬ悪、毒を撒く首魁も現れる。掟と図鑑はいつでも開ける。</p>`,
+            buttons: [{ label: 'タイトルへ', cls: 'ghost', onClick: () => { Game.endTutorial(); setTimeout(showTitle, 0); } },
+              { label: '審問を始める', cls: 'primary', onClick: () => { Game.endTutorial(); setTimeout(startNewFlow, 0); } }],
+          });
+        }), 600);
+      } else {
+        setTimeout(() => toast('その者は無辜だった……もう一度、証言を見比べよう。', 'bad'), 400);
+      }
+      return;
+    }
+    if (type === 'flip' && s && (s.wait === 'flip')) { tut.step++; tutRender(); return; }
+    if (type === 'flip' && s && s.wait === 'allflip' && t.cards.every((c) => c.flipped)) { tut.step++; tutRender(); return; }
+    if (type === 'flip' && s && s.wait === 'next' && tut.step === 0) { tut.step = 2; tutRender(); }
+  }
+
+  function startTutorial() {
+    Game.startTutorial();
+    showTrial(false);
+  }
+
+  /* ========== 操作の受付 ========== */
+  function onClick(e) {
+    Audio2.init();
+    const a = e.target.closest('[data-act]');
+    if (!a || !app.contains(a)) return;
+    const act = a.dataset.act;
+    switch (act) {
+      case 'continue': Audio2.play('select'); route(); break;
+      case 'new': Audio2.play('select'); startNewFlow(); break;
+      case 'tutorial': Audio2.play('select'); startTutorial(); break;
+      case 'codex': case 'codexbtn': Audio2.play('select'); showCodex(); break;
+      case 'relics': Audio2.play('select'); showRelics(); break;
+      case 'records': Audio2.play('select'); showRecords(); break;
+      case 'settings': Audio2.play('select'); showSettings(); break;
+      case 'rules': Audio2.play('select'); showRules(); break;
+      case 'menu': Audio2.play('select'); showMenu(); break;
+      case 'card': onCard(+a.dataset.i); break;
+      case 'log': Audio2.play('select'); select(+a.dataset.i); { const ce = cardEl(+a.dataset.i); if (ce && window.innerHeight > window.innerWidth) ce.scrollIntoView({ block: 'nearest' }); } break;
+      case 'ref': {
+        e.stopPropagation();
+        const j = +a.dataset.ref;
+        const ce = cardEl(j);
+        if (ce) { ce.classList.add('guide'); setTimeout(() => ce.classList.remove('guide'), 900); }
+        Audio2.play('select');
+        if (T().cards[j].flipped) select(j);
+        break;
+      }
+      case 'skip-type': if (typer) typer.finish(); break;
+      case 'mark': Audio2.play('mark'); Game.setMark(sel, a.dataset.m); updateCard(sel); renderDetail(); renderLog(); break;
+      case 'exec': Audio2.play('select'); askExecute(); break;
+      case 'slot': onSlot(+a.dataset.slot); break;
+      case 'cancel-target': Audio2.play('select'); targetSlot = null; renderItems(); renderDetail(); break;
+      case 'relic': { const x = RELIC[a.dataset.id]; toast(`<b>${esc(x.name)}</b>：${esc(x.desc)}`); break; }
+      case 'bossinfo': { const x = ROLE[T().boss]; toast(`<b>${esc(x.name)}</b>：${esc(x.desc)}`); break; }
+      case 'close-ov': Audio2.play('select'); a.closest('.overlay').remove(); break;
+      case 'peek': Audio2.play('select'); peek(); break;
+      case 'unpeek': Audio2.play('select'); unpeek(); break;
+      case 'to-next': Audio2.play('select'); route(); break;
+      case 'end-run': Audio2.play('select'); Game.clearRunOnly(); showTitle(); break;
+      case 'take': {
+        const res = Game.takeReward(+a.dataset.idx);
+        if (res && res.error) { toast(res.error, 'bad'); break; }
+        Audio2.play('coin');
+        route();
+        break;
+      }
+      case 'skip-reward': Audio2.play('select'); Game.skipReward(); route(); break;
+      case 'buy': {
+        const res = Game.buy(+a.dataset.idx);
+        if (res && res.error) { toast(res.error, 'bad'); break; }
+        Audio2.play('coin');
+        showInterlude();
+        break;
+      }
+      case 'rest': { const res = Game.rest(); if (res) { Audio2.play('good'); toast(`宿で体を休めた。信用＋${res.amount}。`, 'good'); showInterlude(); } break; }
+      case 'next-chapter': Audio2.play('select'); Game.nextChapter(); showTrial(false, true); break;
+      case 'tut-next': Audio2.play('select'); tut.step++; tutRender(); break;
+      default: break;
+    }
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') {
+      const m = app.querySelector('.modal-bg:last-of-type');
+      if (m) { const x = m.querySelector('[data-x]'); if (x) x.click(); }
+    }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"]')) { e.preventDefault(); e.target.click(); }
+  }
+
+  /* ---------- 舞う埃 ---------- */
+  function dust() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cv = document.createElement('canvas');
+    cv.id = 'dust';
+    app.prepend(cv);
+    const ctx = cv.getContext('2d');
+    let W = 0, H = 0;
+    const ps = range(36).map(() => ({ x: Math.random(), y: Math.random(), s: 0.4 + Math.random() * 1.4, v: 0.00008 + Math.random() * 0.00025, d: Math.random() * 6.28 }));
+    const resize = () => { const dpr = Math.min(2, window.devicePixelRatio || 1); W = cv.width = app.clientWidth * dpr; H = cv.height = app.clientHeight * dpr; cv.style.width = '100%'; cv.style.height = '100%'; };
+    resize();
+    window.addEventListener('resize', resize);
+    let last = performance.now();
+    const loop = (now) => {
+      const dt = Math.min(50, now - last); last = now;
+      ctx.clearRect(0, 0, W, H);
+      for (const p of ps) {
+        p.y -= p.v * dt; p.d += 0.0006 * dt;
+        p.x += Math.sin(p.d) * 0.00005 * dt;
+        if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+        ctx.fillStyle = `rgba(232,201,135,${0.18 + 0.2 * Math.sin(p.d * 2) ** 2})`;
+        ctx.beginPath(); ctx.arc(p.x * W, p.y * H, p.s * (W / app.clientWidth), 0, 6.283); ctx.fill();
+      }
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  function boot() {
+    Game.loadMeta();
+    Game.loadRun();
+    toastWrap = document.createElement('div');
+    toastWrap.className = 'toast-wrap';
+    toastWrap.setAttribute('aria-live', 'polite');
+    app.appendChild(toastWrap);
+    dust();
+    Audio2.setBgm(Game.meta.settings.bgm);
+    Audio2.setSfx(Game.meta.settings.sfx);
+    app.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    showTitle();
+  }
+
+  return { boot, toast };
+})();
+
+/* ---- main.js ---- */
+/* ===== 起動 ===== */
+UI.boot();
+
+})();
+</script>
+</body>
+</html>
